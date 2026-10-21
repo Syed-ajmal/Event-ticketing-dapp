@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:3000";
+
 const api = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: API_BASE_URL,
   withCredentials: true, //to send cookies to the server
 });
 
@@ -28,7 +30,7 @@ export async function refreshToken() {
       try {
         // Use axios directly so a refresh 401 won't trigger the api interceptor.
         const response = await axios.get(
-          "http://localhost:3000/api/auth/refresh-token",
+          `${API_BASE_URL}/api/auth/refresh-token`,
           { withCredentials: true },
         );
 
