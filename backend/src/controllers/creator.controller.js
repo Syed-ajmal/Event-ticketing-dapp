@@ -1,5 +1,8 @@
 import creatorRequestModel from "../models/creatorRequest.model.js";
-import { grantEventCreatorRole } from "../services/eventTicketing.js";
+import {
+  prepareEventCreatorRoleGrant,
+  verifyEventCreatorRoleGrant,
+} from "../services/eventTicketing.js";
 
 export async function request(req, res) {
   try {
@@ -81,6 +84,20 @@ export async function request(req, res) {
   }
 }
 
+export async function listPending(req, res) {
+  try {
+    const requests = await creatorRequestModel
+      .find({ status: "pending" })
+      .populate("user", "username email")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({ requests });
+  } catch (error) {
+    console.error("Pending creator requests fetch failed:", error);
+    return res.status(500).json({ message: "Could not load creator requests" });
+  }
+}
+
 export async function approve(req, res) {
   try {
     const creatorRequest = await creatorRequestModel
@@ -106,31 +123,79 @@ export async function approve(req, res) {
       return res.status(400).json({ message: "User has no linked wallet address" });
     }
 
-    // Grant the on-chain role first. If the DB update later fails, retrying this
-    // endpoint is safe because the service detects an already-granted role.
-    const grantResult = await grantEventCreatorRole(targetUser.walletAddress);
+    const adminWalletAddress = req.user.walletAddress;
+    if (!adminWalletAddress) {
+      return res.status(400).json({ message: "Link an admin wallet before approving requests" });
+    }
 
-    targetUser.role = "creator";
-    creatorRequest.status = "approved";
-    creatorRequest.reviewedBy = req.user._id;
-    creatorRequest.reviewedAt = new Date();
-    creatorRequest.walletAddress = grantResult.walletAddress.toLowerCase();
-    creatorRequest.txHash = grantResult.txHash ?? creatorRequest.txHash;
+    // First call prepares the wallet transaction; the client signs and submits
+    // it, then retries with transactionHash so the backend can verify it.
+    if (!req.body?.transactionHash) {
+      const grantResult = await prepareEventCreatorRoleGrant(
+        adminWalletAddress,
+        targetUser.walletAddress,
+      );
 
-    await targetUser.save();
-    await creatorRequest.save();
+      if (grantResult.alreadyGranted) {
+        return finalizeCreatorApproval(req, res, creatorRequest, targetUser, {
+          ...grantResult,
+          txHash: creatorRequest.txHash ?? null,
+        });
+      }
 
-    return res.status(200).json({
-      message: "Creator request approved",
-      requestId: creatorRequest._id,
-      userId: targetUser._id,
-      walletAddress: grantResult.walletAddress,
-      role: targetUser.role,
-      alreadyGranted: grantResult.alreadyGranted,
-      transactionHash: grantResult.txHash,
-    });
+      return res.status(200).json({
+        message: "Sign and submit this transaction with the admin wallet, then send its hash to approve",
+        requestId: creatorRequest._id,
+        walletAddress: grantResult.walletAddress,
+        transaction: grantResult.transaction,
+      });
+    }
+
+    const grantResult = await verifyEventCreatorRoleGrant(
+      req.body.transactionHash,
+      adminWalletAddress,
+      targetUser.walletAddress,
+    );
+
+    return finalizeCreatorApproval(req, res, creatorRequest, targetUser, grantResult);
   } catch (error) {
     console.error("Creator approval failed:", error);
+    const clientErrors = [
+      "Authenticated admin wallet does not have DEFAULT_ADMIN_ROLE",
+      "The creator or admin wallet address is invalid",
+      "A valid transaction hash is required",
+      "Transaction not found; wait for confirmation and retry",
+      "Transaction is not a creator role grant",
+      "Transaction sender does not match this approval",
+      "Transaction does not grant creator role to the requested wallet",
+      "Creator role grant is not visible on chain yet",
+      "The transaction to grant creator role failed",
+    ];
+    if (clientErrors.includes(error.message)) {
+      return res.status(400).json({ message: error.message });
+    }
     return res.status(500).json({ message: "Could not approve creator request" });
   }
+}
+
+async function finalizeCreatorApproval(req, res, creatorRequest, targetUser, grantResult) {
+  targetUser.role = "creator";
+  creatorRequest.status = "approved";
+  creatorRequest.reviewedBy = req.user._id;
+  creatorRequest.reviewedAt = new Date();
+  creatorRequest.walletAddress = grantResult.walletAddress.toLowerCase();
+  creatorRequest.txHash = grantResult.txHash ?? creatorRequest.txHash;
+
+  await targetUser.save();
+  await creatorRequest.save();
+
+  return res.status(200).json({
+    message: "Creator request approved",
+    requestId: creatorRequest._id,
+    userId: targetUser._id,
+    walletAddress: grantResult.walletAddress,
+    role: targetUser.role,
+    alreadyGranted: grantResult.alreadyGranted,
+    transactionHash: grantResult.txHash,
+  });
 }

@@ -10,6 +10,12 @@ creatorRouter.post(
   creatorController.request,
 );
 
+creatorRouter.get(
+  "/pending",
+  authMiddleware.authAdmin,
+  creatorController.listPending,
+);
+
 creatorRouter.patch(
   "/:requestId/approve",
   authMiddleware.authAdmin,

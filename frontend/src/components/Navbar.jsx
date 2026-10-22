@@ -42,13 +42,16 @@ const Navbar = () => {
           <a href="/#features" className="hidden text-sm font-medium text-slate-600 transition hover:text-indigo-600 sm:inline">
             Features
           </a>
+          {user?.role === "admin" && (
+            <Link
+              to="/admin/creator-requests"
+              className="hidden text-sm font-semibold text-indigo-600 transition hover:text-indigo-500 sm:inline"
+            >
+              Creator requests
+            </Link>
+          )}
           {user ? (
             <>
-              {name && (
-                <span className="hidden border-l border-slate-200 pl-5 text-sm text-slate-600 md:inline">
-                  Hi, {name}
-                </span>
-              )}
               <div className="flex flex-col items-end">
                 {isLinked ? (
                   <span
@@ -78,6 +81,11 @@ const Navbar = () => {
                   </span>
                 )}
               </div>
+              {name && (
+                <span className="hidden border-l border-slate-200 pl-5 text-sm text-slate-600 md:inline">
+                  Hi, {name}
+                </span>
+              )}
               <button
                 type="button"
                 onClick={handleLogout}

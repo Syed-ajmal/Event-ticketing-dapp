@@ -25,7 +25,8 @@ export const useAuth = () => {
         return false;
       }
 
-      setUser(data.user);
+      const profile = await getMe(data.accessToken);
+      setUser(profile?.user ?? data.user);
       setAccessToken(data.accessToken);
       return true;
     } catch (err) {
