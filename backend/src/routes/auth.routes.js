@@ -33,6 +33,23 @@ authRouter.get("/logout", authController.logout);
  * GET /api/auth/logout-all
  */
 authRouter.get("/logout-all", authController.logoutAll);
- 
+
+/**
+ * POST /api/auth/wallet/nonce
+ */
+authRouter.post(
+  "/wallet/nonce",
+  authMiddleware.authUser,
+  authController.getWalletNonce,
+);
+
+/**
+ * POST /api/auth/wallet/link
+ */
+authRouter.post(
+  "/wallet/link",
+  authMiddleware.authUser,
+  authController.linkWallet,
+);
 
 export default authRouter;

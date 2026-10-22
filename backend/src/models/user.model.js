@@ -31,7 +31,8 @@ const userSchema = new mongoose.Schema(
       unique: true,
       sparse: true, // many users can have no wallet
     },
-    walletNonce: { type: String },
+    walletNonce: { type: String, select: false },
+    walletNonceExpiresAt: { type: Date, select: false },
   },
   { timestamps: true }, // message to sign when linking a wallet
 );

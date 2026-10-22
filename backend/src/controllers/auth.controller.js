@@ -1,8 +1,12 @@
 import userModel from "../models/user.model.js";
 import sessionModel from "../models/session.model.js";
+import creatorRequestModel from "../models/creatorRequest.model.js";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import config from "../config/config.js";
+import { getAddress, verifyMessage } from "ethers";
+
+const WALLET_NONCE_TTL_MS = 5 * 60 * 1000;
 
 export async function register(req, res) {
   try {
@@ -212,6 +216,7 @@ export async function getMe(req, res) {
       username: user.username,
       email: user.email,
       role: user.role,
+      walletAddress: user.walletAddress || null,
     },
   });
 }
@@ -352,4 +357,113 @@ export async function logoutAll(req, res) {
   res.status(200).json({
     message: "User logged out from all devices successfully",
   });
+}
+
+export async function getWalletNonce(req, res) {
+  try {
+    const nonce = crypto.randomBytes(32).toString("hex");
+
+    await userModel.findByIdAndUpdate(req.user._id, {
+      walletNonce: nonce,
+      walletNonceExpiresAt: new Date(Date.now() + WALLET_NONCE_TTL_MS),
+    });
+
+    return res.status(200).json({
+      message: "Sign this message to link your wallet",
+      nonce,
+      messageToSign: `Link wallet to your account. Nonce: ${nonce}`,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+export async function linkWallet(req, res) {
+  try {
+    const { walletAddress, signature } = req.body;
+
+    if (
+      typeof walletAddress !== "string" ||
+      typeof signature !== "string" ||
+      !walletAddress.trim() ||
+      !signature.trim()
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Wallet address and signature are required" });
+    }
+
+    const user = await userModel
+      .findById(req.user._id)
+      .select("+walletNonce +walletNonceExpiresAt");
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    // creators and admins can't change wallet (their on-chain role is tied to it)
+    if (user.walletAddress && ["creator", "admin"].includes(user.role)) {
+      return res.status(403).json({
+        message: "Wallet can't be changed for creators",
+      });
+    }
+
+    // can't change wallet while a creator request is pending
+    const hasPending = await creatorRequestModel.exists({
+      user: user._id,
+      status: "pending",
+    });
+
+    if (hasPending) {
+      return res.status(409).json({
+        message:
+          "You have a pending creator request. Wallet can't be changed now.",
+      });
+    }
+
+    if (!user.walletNonce || !user.walletNonceExpiresAt) {
+      return res.status(400).json({ message: "Request a wallet nonce first" });
+    }
+
+    if (user.walletNonceExpiresAt <= new Date()) {
+      user.walletNonce = undefined;
+      user.walletNonceExpiresAt = undefined;
+      await user.save();
+      return res.status(400).json({ message: "Nonce expired. Request a new one." });
+    }
+
+    const messageToSign = `Link wallet to your account. Nonce: ${user.walletNonce}`;
+    const recoveredAddress = getAddress(
+      verifyMessage(messageToSign, signature),
+    );
+    const submittedAddress = getAddress(walletAddress);
+
+    if (recoveredAddress !== submittedAddress) {
+      return res.status(401).json({ message: "Invalid wallet signature" });
+    }
+
+    user.walletAddress = submittedAddress.toLowerCase();
+    user.walletNonce = undefined;
+    user.walletNonceExpiresAt = undefined;
+    await user.save();
+
+    return res.status(200).json({
+      message: "Wallet linked successfully",
+      walletAddress: user.walletAddress,
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ message: "Wallet is already linked" });
+    }
+
+    if (err.code === "INVALID_ARGUMENT") {
+      return res
+        .status(400)
+        .json({ message: "Invalid wallet address or signature" });
+    }
+
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
 }
