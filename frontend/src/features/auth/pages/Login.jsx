@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router";
+import Navbar from "../../../components/Navbar";
+import Footer from "../../../components/Footer";
 import { useAuth } from "../hooks/useAuth.js";
 
 const Login = () => {
@@ -19,65 +21,80 @@ const Login = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <main>
-        <h1>Loading..........</h1>
-      </main>
-    );
-  }
-
   return (
-    <main className="flex h-screen w-full items-center justify-center bg-mist-900 text-amber-50">
-      <div className="min-w-110 flex flex-col gap-4 p-4">
-        <h1 className="text-5xl font-bold text-center font-sans">Login</h1>
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={(e) => {
-            submitHandler(e);
-          }}
-        >
-          <div className="flex flex-col gap-2">
-            <label htmlFor="email" className="">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              placeholder="Enter email address"
-              className="border-none h-9 gap-0.5 px-4 py-0.5 rounded-[6px] bg-amber-50 text-mauve-900"
-              onChange={(e) => {
-                setEmail(e.target.value);
-              }}
-            />
+    <main className="flex min-h-screen flex-col bg-[#f5f7fb] text-slate-900">
+      <Navbar />
+
+      <section className="relative isolate flex flex-1 items-center justify-center overflow-hidden bg-[#111936] px-6 py-16 sm:py-20">
+        <div className="absolute -right-24 -top-36 -z-10 size-[32rem] rounded-full bg-indigo-500/20 blur-3xl" />
+        <div className="absolute -bottom-48 left-1/3 -z-10 size-[28rem] rounded-full bg-cyan-400/10 blur-3xl" />
+
+        <div className="w-full max-w-md rounded-2xl border border-white/60 bg-white p-6 shadow-2xl sm:p-9">
+          <div className="mb-8 text-center">
+            
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">Log in to TicketApp</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Sign in to find your events and manage your tickets.</p>
           </div>
-          <div className="flex flex-col gap-2">
-            <label htmlFor="password" className="gap-1">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              placeholder="Enter password"
-              className="border-none h-9 gap-0.5 px-4 py-0.5 rounded-[6px] bg-amber-50 text-mauve-900"
-              onChange={(e) => {
-                setPassword(e.target.value);
-              }}
-            />
-          </div>
-          <button className="px-2 py-1.5 rounded-[12px] bg-blue-800 transition duration-150 active:scale-95 mt-2">
-            Login
-          </button>
-        </form>
-        <p className="text-right">
-          Don't have an account?{" "}
-          <Link className="underline text-blue-600" to={"/register"}>
-            register
-          </Link>
-        </p>
-      </div>
+
+          {loading ? (
+            <p className="py-4 text-center text-sm font-medium text-slate-600" role="status">
+              Logging you in…
+            </p>
+          ) : (
+            <form className="flex flex-col gap-5" onSubmit={submitHandler}>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="email" className="text-sm font-semibold text-slate-700">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  autoComplete="email"
+                  required
+                  placeholder="you@example.com"
+                  className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label htmlFor="password" className="text-sm font-semibold text-slate-700">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  autoComplete="current-password"
+                  required
+                  placeholder="Enter your password"
+                  className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="mt-1 inline-flex h-11 items-center justify-center rounded-xl bg-indigo-600 px-5 font-semibold text-white shadow-lg shadow-indigo-950/15 transition hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 active:scale-[.99]"
+              >
+                Log in
+              </button>
+            </form>
+          )}
+
+          <p className="mt-6 text-center text-sm text-slate-600">
+            Don&apos;t have an account?{" "}
+            <Link className="font-semibold text-indigo-600 transition hover:text-indigo-500" to="/register">
+              Register
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      <Footer />
     </main>
   );
 };
