@@ -5,6 +5,11 @@ import * as authMiddleware from "../middlewares/auth.middleware.js";
 const eventRouter = Router();
 
 /**
+ * GET /api/event/mine
+ */
+eventRouter.get("/mine", authMiddleware.authUser, eventController.listMine);
+
+/**
  * POST /api/event/metadata
  */
 eventRouter.post(

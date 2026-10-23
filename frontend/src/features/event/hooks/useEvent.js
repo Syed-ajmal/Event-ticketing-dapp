@@ -1,8 +1,9 @@
-import { useContext } from "react";
+import { useCallback, useContext } from "react";
 import { EventContext } from "../event.context.jsx";
 import {
   cancelEvent,
   createEvent,
+  getMyEvents,
   uploadEventMetadata,
 } from "../services/event.api.js";
 
@@ -22,9 +23,11 @@ export const useEvent = () => {
     setMetadataURI,
     event,
     setEvent,
+    events,
+    setEvents,
   } = context;
 
-  const runRequest = async (request) => {
+  const runRequest = useCallback(async (request) => {
     setLoading(true);
     setError(null);
 
@@ -38,13 +41,19 @@ export const useEvent = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setError, setLoading]);
 
   const handleUploadMetadata = async (metadata) => {
     const data = await runRequest(() => uploadEventMetadata(metadata));
     if (data?.metadataURI) setMetadataURI(data.metadataURI);
     return data;
   };
+
+  const handleListMyEvents = useCallback(async () => {
+    const data = await runRequest(getMyEvents);
+    if (data?.events) setEvents(data.events);
+    return data?.events ?? null;
+  }, [runRequest, setEvents]);
 
   const handleCreateEvent = async (details) => {
     const data = await runRequest(() => createEvent(details));
@@ -60,10 +69,12 @@ export const useEvent = () => {
 
   return {
     event,
+    events,
     metadataURI,
     loading,
     error,
     handleUploadMetadata,
+    handleListMyEvents,
     handleCreateEvent,
     handleCancelEvent,
   };

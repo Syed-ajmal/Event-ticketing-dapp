@@ -12,6 +12,24 @@ const UINT32_MAX = (1n << 32n) - 1n;
 const UINT96_MAX = (1n << 96n) - 1n;
 const UINT256_MAX = (1n << 256n) - 1n;
 
+export async function listMine(req, res) {
+  if (req.user.role !== "creator") {
+    return res.status(403).json({ message: "Creator access required" });
+  }
+
+  try {
+    const events = await eventModel
+      .find({ creator: req.user._id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({ events });
+  } catch (error) {
+    console.error("Creator events fetch failed:", error);
+    return res.status(500).json({ message: "Could not load your events" });
+  }
+}
+
 export async function uploadMetadata(req, res) {
   if (req.user.role !== "creator") {
     return res.status(403).json({ message: "Creator access required" });

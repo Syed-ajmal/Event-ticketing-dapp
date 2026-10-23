@@ -77,9 +77,14 @@ const MobileNavigation = ({
                 {walletError && <p className="mt-2 text-xs text-rose-600" role="alert">{walletError}</p>}
               </div>
               {user.role === "creator" && (
-                <Link to="/events/create" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                  Create event
-                </Link>
+                <>
+                  <Link to="/events/mine" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    Your events
+                  </Link>
+                  <Link to="/events/create" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    Create event
+                  </Link>
+                </>
               )}
               {user.role === "attendee" && (
                 <Link to="/creator/request" onClick={onClose} className="rounded-lg font-semibold px-3 py-3 text-sm text-slate-700 hover:bg-slate-50">

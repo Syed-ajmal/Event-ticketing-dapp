@@ -7,6 +7,7 @@ export const EventProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [metadataURI, setMetadataURI] = useState(null);
   const [event, setEvent] = useState(null);
+  const [events, setEvents] = useState([]);
 
   return (
     <EventContext.Provider
@@ -19,6 +20,8 @@ export const EventProvider = ({ children }) => {
         setMetadataURI,
         event,
         setEvent,
+        events,
+        setEvents,
       }}
     >
       {children}

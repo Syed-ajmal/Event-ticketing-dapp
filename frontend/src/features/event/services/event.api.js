@@ -1,5 +1,40 @@
 import { api } from "../../auth/services/auth.api.js";
 
+const IPFS_GATEWAY = (
+  import.meta.env.VITE_IPFS_GATEWAY_URL || "https://gateway.pinata.cloud/ipfs"
+).replace(/\/$/, "");
+
+export function resolveIpfsUrl(uri) {
+  if (typeof uri !== "string" || !uri.trim()) return null;
+
+  const contentPath = uri.startsWith("ipfs://")
+    ? uri.slice("ipfs://".length)
+    : uri;
+
+  if (contentPath.startsWith("http://") || contentPath.startsWith("https://")) {
+    return contentPath;
+  }
+
+  return `${IPFS_GATEWAY}/${contentPath.replace(/^\/ipfs\//, "")}`;
+}
+
+export async function getMyEvents() {
+  const response = await api.get("/api/event/mine");
+  return response.data;
+}
+
+export async function getEventMetadata(metadataURI) {
+  const metadataURL = resolveIpfsUrl(metadataURI);
+  if (!metadataURL) throw new Error("Event metadata URI is missing.");
+
+  const response = await fetch(metadataURL);
+  if (!response.ok) {
+    throw new Error(`Could not load event metadata (${response.status}).`);
+  }
+
+  return response.json();
+}
+
 export async function uploadEventMetadata(metadata) {
   const response = await api.post("/api/event/metadata", { metadata });
   return response.data;
