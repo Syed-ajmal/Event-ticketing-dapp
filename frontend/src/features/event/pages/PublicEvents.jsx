@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import Footer from "../../../components/Footer.jsx";
 import Navbar from "../../../components/Navbar.jsx";
 import { useEvent } from "../hooks/useEvent.js";
@@ -102,7 +102,7 @@ const PublicEvents = () => {
       return;
     }
 
-    if (user.role !== "attendee") return;
+    if (!["attendee", "creator"].includes(user.role)) return;
 
     if (!isLinked) {
       connectWallet().catch(() => {});
@@ -196,20 +196,21 @@ const PublicEvents = () => {
                   {claimedTickets[event.eventId] ? (
                     <p className="mt-5 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700" role="status">
                       Ticket #{claimedTickets[event.eventId].ticketId} claimed
+                      <Link to="/tickets/mine" className="ml-2 underline">View your tickets</Link>
                     </p>
                   ) : (
                     <button
                       type="button"
                       onClick={() => onClaimTicket(event)}
-                      disabled={authLoading || connecting || claimingEventId !== null || Boolean(user && user.role !== "attendee")}
+                      disabled={authLoading || connecting || claimingEventId !== null || Boolean(user && !["attendee", "creator"].includes(user.role))}
                       className="mt-5 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {authLoading
                         ? "Checking account…"
                         : !user
                           ? "Log in to claim"
-                          : user.role !== "attendee"
-                            ? "Attendees only"
+                          : !["attendee", "creator"].includes(user.role)
+                            ? "Attendees and creators only"
                             : connecting
                               ? "Linking wallet…"
                               : !isLinked

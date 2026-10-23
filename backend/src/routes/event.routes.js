@@ -15,6 +15,15 @@ eventRouter.get("/", eventController.listPublic);
 eventRouter.get("/mine", authMiddleware.authUser, eventController.listMine);
 
 /**
+ * GET /api/event/my-tickets
+ */
+eventRouter.get(
+  "/my-tickets",
+  authMiddleware.authUser,
+  eventController.listMyTickets,
+);
+
+/**
  * POST /api/event/metadata
  */
 eventRouter.post(

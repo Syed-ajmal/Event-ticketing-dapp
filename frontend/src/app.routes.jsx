@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import CreateEvent from "./features/event/pages/CreateEvent.jsx";
 import YourEvents from "./features/event/pages/YourEvents.jsx";
 import PublicEvents from "./features/event/pages/PublicEvents.jsx";
+import YourTickets from "./features/event/pages/YourTickets.jsx";
 
 export const router = createBrowserRouter([
   {
@@ -21,6 +22,14 @@ export const router = createBrowserRouter([
   {
     path: "/events",
     element: <PublicEvents />,
+  },
+  {
+    path: "/tickets/mine",
+    element: (
+      <Protected allowedRoles={["attendee", "creator"]}>
+        <YourTickets />
+      </Protected>
+    ),
   },
   {
     path: "/events/mine",

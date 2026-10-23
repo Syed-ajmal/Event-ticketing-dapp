@@ -7,6 +7,7 @@ import {
   claimEventTicket,
   createEvent,
   getMyEvents,
+  getMyTickets,
   getPublicEvents,
   uploadEventMetadata,
 } from "../services/event.api.js";
@@ -80,6 +81,11 @@ export const useEvent = () => {
     if (data?.events) setEvents(data.events);
     return data?.events ?? null;
   }, [runRequest, setEvents]);
+
+  const handleListMyTickets = useCallback(async () => {
+    const data = await runRequest(getMyTickets);
+    return data?.tickets ?? null;
+  }, [runRequest]);
 
   const handleListPublicEvents = useCallback(
     (page = 1) => runRequest(() => getPublicEvents(page)),
@@ -168,8 +174,8 @@ export const useEvent = () => {
 
     try {
       if (!user) throw new Error("Log in before claiming a ticket.");
-      if (user.role !== "attendee") {
-        throw new Error("Only attendee accounts can claim tickets.");
+      if (!["attendee", "creator"].includes(user.role)) {
+        throw new Error("Only attendee and creator accounts can claim tickets.");
       }
       if (!walletAddress || !isLinked) {
         throw new Error("Link a wallet to your attendee account before claiming.");
@@ -230,6 +236,7 @@ export const useEvent = () => {
     error,
     handleUploadMetadata,
     handleListMyEvents,
+    handleListMyTickets,
     handleListPublicEvents,
     handleCreateEvent,
     handleCancelEvent,

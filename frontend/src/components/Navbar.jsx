@@ -65,6 +65,13 @@ const Navbar = () => {
         Your events
       </Link>
       <Link
+        to="/tickets/mine"
+        onClick={closeMobileMenu}
+        className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-indigo-600"
+      >
+        Your tickets
+      </Link>
+      <Link
         to="/events/create"
         onClick={closeMobileMenu}
         className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-indigo-600"
@@ -73,13 +80,22 @@ const Navbar = () => {
       </Link>
     </>
   ) : user?.role === "attendee" ? (
-    <Link
-      to="/creator/request"
-      onClick={closeMobileMenu}
-      className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-indigo-600"
-    >
-      Become a creator
-    </Link>
+    <>
+      <Link
+        to="/tickets/mine"
+        onClick={closeMobileMenu}
+        className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-indigo-600"
+      >
+        Your tickets
+      </Link>
+      <Link
+        to="/creator/request"
+        onClick={closeMobileMenu}
+        className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-indigo-600"
+      >
+        Become a creator
+      </Link>
+    </>
   ) : user?.role === "admin" ? (
     <Link
       to="/admin/creator-requests"

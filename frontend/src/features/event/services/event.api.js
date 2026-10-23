@@ -23,6 +23,11 @@ export async function getMyEvents() {
   return response.data;
 }
 
+export async function getMyTickets() {
+  const response = await api.get("/api/event/my-tickets");
+  return response.data;
+}
+
 export async function getPublicEvents(page = 1) {
   const response = await api.get("/api/event", { params: { page } });
   return response.data;

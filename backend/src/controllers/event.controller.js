@@ -77,6 +77,29 @@ export async function listMine(req, res) {
   }
 }
 
+export async function listMyTickets(req, res) {
+  if (!["attendee", "creator"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Attendee or creator access required" });
+  }
+
+  try {
+    const tickets = await ticketModel
+      .find({ attendee: req.user._id })
+      .select("ticketId eventId event attendeeWalletAddress transactionHash createdAt")
+      .populate({
+        path: "event",
+        select: "eventId startsAt endsAt ticketPrice metadataURI cancelled",
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({ tickets });
+  } catch (error) {
+    console.error("User tickets fetch failed:", error);
+    return res.status(500).json({ message: "Could not load your tickets" });
+  }
+}
+
 export async function uploadMetadata(req, res) {
   if (req.user.role !== "creator") {
     return res.status(403).json({ message: "Creator access required" });
@@ -345,8 +368,10 @@ export async function cancelEvent(req, res) {
 }
 
 export async function claimTicket(req, res) {
-  if (req.user.role !== "attendee") {
-    return res.status(403).json({ message: "Attendee access required" });
+  if (!["attendee", "creator"].includes(req.user.role)) {
+    return res
+      .status(403)
+      .json({ message: "Attendee or creator access required" });
   }
   if (!req.user.walletAddress) {
     return res
