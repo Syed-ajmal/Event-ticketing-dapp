@@ -129,6 +129,9 @@ const Navbar = () => {
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-6">
+            <Link to="/events" onClick={closeMobileMenu} className="whitespace-nowrap text-xs font-medium text-slate-600 transition hover:text-indigo-600 sm:text-sm">
+              Events
+            </Link>
             <a href="/#how-it-works" onClick={closeMobileMenu} className="whitespace-nowrap text-xs font-medium text-slate-600 transition hover:text-indigo-600 sm:text-sm">
               How it works
             </a>

@@ -5,6 +5,7 @@ import {
   cancelEvent as cancelEventRequest,
   createEvent,
   getMyEvents,
+  getPublicEvents,
   uploadEventMetadata,
 } from "../services/event.api.js";
 
@@ -76,6 +77,11 @@ export const useEvent = () => {
     if (data?.events) setEvents(data.events);
     return data?.events ?? null;
   }, [runRequest, setEvents]);
+
+  const handleListPublicEvents = useCallback(
+    (page = 1) => runRequest(() => getPublicEvents(page)),
+    [runRequest],
+  );
 
   const handleCreateEvent = async (details) => {
     const data = await runRequest(() => createEvent(details));
@@ -162,6 +168,7 @@ export const useEvent = () => {
     error,
     handleUploadMetadata,
     handleListMyEvents,
+    handleListPublicEvents,
     handleCreateEvent,
     handleCancelEvent,
   };

@@ -11,6 +11,48 @@ const UINT64_MAX = (1n << 64n) - 1n;
 const UINT32_MAX = (1n << 32n) - 1n;
 const UINT96_MAX = (1n << 96n) - 1n;
 const UINT256_MAX = (1n << 256n) - 1n;
+const PUBLIC_EVENT_PAGE_SIZE = 10;
+
+export async function listPublic(req, res) {
+  const rawPage = req.query.page ?? "1";
+  if (typeof rawPage !== "string" || !/^\d+$/.test(rawPage)) {
+    return res.status(400).json({ message: "page must be a positive integer" });
+  }
+  const page = Number(rawPage);
+  if (!Number.isSafeInteger(page) || page < 1) {
+    return res.status(400).json({ message: "page must be a positive integer" });
+  }
+
+  const limit = PUBLIC_EVENT_PAGE_SIZE;
+  const now = Math.floor(Date.now() / 1000);
+  const filter = {
+    cancelled: { $ne: true },
+    startsAt: { $gt: now },
+  };
+
+  try {
+    const [events, total] = await Promise.all([
+      eventModel
+        .find(filter)
+        .select("eventId creatorWalletAddress startsAt endsAt ticketLimit ticketPrice metadataURI createdAt")
+        .sort({ startsAt: 1, _id: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      eventModel.countDocuments(filter),
+    ]);
+
+    return res.status(200).json({
+      events,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (error) {
+    console.error("Public events fetch failed:", error);
+    return res.status(500).json({ message: "Could not load events" });
+  }
+}
 
 export async function listMine(req, res) {
   if (req.user.role !== "creator") {

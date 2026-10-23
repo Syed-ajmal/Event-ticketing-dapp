@@ -23,6 +23,11 @@ export async function getMyEvents() {
   return response.data;
 }
 
+export async function getPublicEvents(page = 1) {
+  const response = await api.get("/api/event", { params: { page } });
+  return response.data;
+}
+
 export async function getEventMetadata(metadataURI) {
   const metadataURL = resolveIpfsUrl(metadataURI);
   if (!metadataURL) throw new Error("Event metadata URI is missing.");

@@ -7,6 +7,7 @@ import AdminCreatorRequests from "./features/creator/pages/AdminCreatorRequests"
 import Home from "./pages/Home";
 import CreateEvent from "./features/event/pages/CreateEvent.jsx";
 import YourEvents from "./features/event/pages/YourEvents.jsx";
+import PublicEvents from "./features/event/pages/PublicEvents.jsx";
 
 export const router = createBrowserRouter([
   {
@@ -16,6 +17,10 @@ export const router = createBrowserRouter([
   {
     path: "/register",
     element: <Register />,
+  },
+  {
+    path: "/events",
+    element: <PublicEvents />,
   },
   {
     path: "/events/mine",
