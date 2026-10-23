@@ -10,12 +10,20 @@ if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is not defined in the environment variables");
 }
 
-if(!process.env.SEPOLIA_RPC_URL) {
-  throw new Error("SEPOLIA_RPC_URL is not defined in the environment variables");
+if (!process.env.SEPOLIA_RPC_URL) {
+  throw new Error(
+    "SEPOLIA_RPC_URL is not defined in the environment variables",
+  );
 }
 
-if(!process.env.EVENT_CONTRACT_ADDRESS) {
-  throw new Error("EVENT_CONTRACT_ADDRESS is not defined in the environment variables");
+if (!process.env.EVENT_CONTRACT_ADDRESS) {
+  throw new Error(
+    "EVENT_CONTRACT_ADDRESS is not defined in the environment variables",
+  );
+}
+
+if (!process.env.PINATA_JWT) {
+  throw new Error("PINATA_JWT is not defined in the environment variables");
 }
 
 const config = {
@@ -23,6 +31,7 @@ const config = {
   JWT_SECRET: process.env.JWT_SECRET,
   SEPOLIA_RPC_URL: process.env.SEPOLIA_RPC_URL,
   EVENT_CONTRACT_ADDRESS: process.env.EVENT_CONTRACT_ADDRESS,
+  PINATA_JWT: process.env.PINATA_JWT,
 };
 
 export default config;

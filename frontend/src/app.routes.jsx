@@ -5,6 +5,7 @@ import Protected from "./features/auth/components/Protected";
 import CreateRequest from "./features/creator/pages/CreateRequest";
 import AdminCreatorRequests from "./features/creator/pages/AdminCreatorRequests";
 import Home from "./pages/Home";
+import CreateEvent from "./features/event/pages/CreateEvent.jsx";
 
 export const router = createBrowserRouter([
   {
@@ -14,6 +15,14 @@ export const router = createBrowserRouter([
   {
     path: "/register",
     element: <Register />,
+  },
+  {
+    path: "/events/create",
+    element: (
+      <Protected allowedRoles={["creator"]}>
+        <CreateEvent />
+      </Protected>
+    ),
   },
   {
     path: "/creator/request",

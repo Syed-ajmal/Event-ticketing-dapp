@@ -53,3 +53,16 @@ export async function authAdmin(req, res, next) {
     return res.status(401).json({ message: "Invalid or expired access token" });
   }
 }
+
+export async function authCreator(req, res, next) {
+  try {
+    await authUser(req, res, async () => {
+      if (req.user.role !== "creator") {
+        return res.status(403).json({ message: "Creator access required" });
+      }
+      next();
+    });
+  } catch {
+    return res.status(401).json({ message: "Invalid or expired access token" });
+  }
+}

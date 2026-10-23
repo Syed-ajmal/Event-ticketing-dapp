@@ -4,6 +4,7 @@ import authRouter from "./routes/auth.routes.js";
 import creatorRouter from "./routes/creator.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import eventRouter from "./routes/event.routes.js";
 
 const app = express();
 
@@ -20,5 +21,7 @@ app.use(
 app.use("/api/auth", authRouter);
 
 app.use("/api/creators", creatorRouter);
+
+app.use("/api/event", eventRouter);
 
 export default app;

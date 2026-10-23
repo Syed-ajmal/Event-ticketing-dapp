@@ -55,7 +55,15 @@ const Navbar = () => {
     </>
   );
 
-  const roleLinks = user?.role === "attendee" ? (
+  const roleLinks = user?.role === "creator" ? (
+    <Link
+      to="/events/create"
+      onClick={closeMobileMenu}
+      className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-indigo-600"
+    >
+      Create event
+    </Link>
+  ) : user?.role === "attendee" ? (
     <Link
       to="/creator/request"
       onClick={closeMobileMenu}
