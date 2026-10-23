@@ -34,10 +34,16 @@ const getStatus = (event) => {
 };
 
 const YourEvents = () => {
-  const { events, loading, error, handleListMyEvents } = useEvent();
+  const {
+    events,
+    error,
+    handleListMyEvents,
+    handleCancelEvent,
+  } = useEvent();
   const [eventCards, setEventCards] = useState([]);
   const [metadataLoading, setMetadataLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [cancellingEventId, setCancellingEventId] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -76,7 +82,28 @@ const YourEvents = () => {
     };
   }, [handleListMyEvents]);
 
-  const isLoading = loading || metadataLoading;
+  const isLoading = !hasLoaded || metadataLoading;
+
+  const cancelEvent = async (event) => {
+    const name = event.metadata?.name || `Event #${event.eventId}`;
+    if (!window.confirm(`Cancel “${name}”? This action cannot be undone.`)) return;
+
+    setCancellingEventId(event.eventId);
+    try {
+      const result = await handleCancelEvent(event.eventId);
+      if (result?.event) {
+        setEventCards((current) =>
+          current.map((card) =>
+            card.eventId === result.event.eventId
+              ? { ...card, ...result.event, metadata: card.metadata }
+              : card,
+          ),
+        );
+      }
+    } finally {
+      setCancellingEventId(null);
+    }
+  };
 
   return (
     <main className="flex min-h-screen flex-col bg-[#f5f7fb] text-slate-900">
@@ -151,6 +178,16 @@ const YourEvents = () => {
                         <dd className="mt-1 font-medium">{formatEth(event.ticketPrice)}</dd>
                       </div>
                     </dl>
+                    {status === "Upcoming" && (
+                      <button
+                        type="button"
+                        onClick={() => cancelEvent(event)}
+                        disabled={cancellingEventId !== null}
+                        className="mt-5 w-full rounded-lg border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {cancellingEventId === event.eventId ? "Cancelling…" : "Cancel event"}
+                      </button>
+                    )}
                   </div>
                 </article>
               );

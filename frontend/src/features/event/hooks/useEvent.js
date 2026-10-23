@@ -1,14 +1,36 @@
 import { useCallback, useContext } from "react";
 import { EventContext } from "../event.context.jsx";
+import { useWallet } from "../../wallet/hooks/useWallet.js";
 import {
-  cancelEvent,
+  cancelEvent as cancelEventRequest,
   createEvent,
   getMyEvents,
   uploadEventMetadata,
 } from "../services/event.api.js";
 
+const waitForTransactionReceipt = async (ethereum, transactionHash) => {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const receipt = await ethereum.request({
+      method: "eth_getTransactionReceipt",
+      params: [transactionHash],
+    });
+
+    if (receipt) {
+      if (BigInt(receipt.status) === 0n) {
+        throw new Error("The wallet transaction failed on chain.");
+      }
+      return receipt;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+
+  throw new Error("The transaction is still pending. Please try again shortly.");
+};
+
 export const useEvent = () => {
   const context = useContext(EventContext);
+  const { walletAddress, isLinked } = useWallet();
 
   if (!context) {
     throw new Error("useEvent must be used within an EventProvider");
@@ -61,10 +83,75 @@ export const useEvent = () => {
     return data;
   };
 
-  const handleCancelEvent = async (eventId, transactionHash) => {
-    const data = await runRequest(() => cancelEvent(eventId, transactionHash));
-    if (data?.event) setEvent(data.event);
-    return data;
+  const handleCancelEvent = async (eventId) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!walletAddress || !isLinked) {
+        throw new Error("Connect the wallet linked to your creator account to cancel this event.");
+      }
+
+      const ethereum = window.ethereum;
+      if (!ethereum?.request) {
+        throw new Error("No browser wallet found. Install or enable one to continue.");
+      }
+
+      const prepared = await cancelEventRequest(eventId);
+      if (!prepared?.transaction) {
+        if (prepared?.event) {
+          setEvent(prepared.event);
+          setEvents((current) =>
+            current.map((item) =>
+              item.eventId === prepared.event.eventId ? prepared.event : item,
+            ),
+          );
+        }
+        return prepared;
+      }
+
+      const [account] = await ethereum.request({ method: "eth_requestAccounts" });
+      if (!account || account.toLowerCase() !== walletAddress.toLowerCase()) {
+        throw new Error("Switch your wallet to the address linked to your creator account.");
+      }
+
+      const expectedChainId = `0x${BigInt(prepared.transaction.chainId).toString(16)}`;
+      const currentChainId = await ethereum.request({ method: "eth_chainId" });
+      if (currentChainId.toLowerCase() !== expectedChainId.toLowerCase()) {
+        await ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: expectedChainId }],
+        });
+      }
+
+      const transactionHash = await ethereum.request({
+        method: "eth_sendTransaction",
+        params: [{
+          from: account,
+          to: prepared.transaction.to,
+          data: prepared.transaction.data,
+        }],
+      });
+
+      await waitForTransactionReceipt(ethereum, transactionHash);
+      const result = await cancelEventRequest(eventId, transactionHash);
+      if (result?.event) {
+        setEvent(result.event);
+        setEvents((current) =>
+          current.map((item) =>
+            item.eventId === result.event.eventId ? result.event : item,
+          ),
+        );
+      }
+      return result;
+    } catch (err) {
+      setError(
+        err.response?.data?.message || err.message || "Could not cancel event.",
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return {
