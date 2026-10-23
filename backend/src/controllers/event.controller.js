@@ -1,9 +1,12 @@
 import eventModel from "../models/event.model.js";
+import ticketModel from "../models/ticket.model.js";
 import { uploadEventMetadata } from "../services/pinata.js";
 import {
   prepareCancelEvent,
+  prepareClaimTicket,
   prepareCreateEvent,
   verifyCancelEvent,
+  verifyClaimTicket,
   verifyCreateEvent,
 } from "../services/eventTicketing.js";
 
@@ -34,7 +37,9 @@ export async function listPublic(req, res) {
     const [events, total] = await Promise.all([
       eventModel
         .find(filter)
-        .select("eventId creatorWalletAddress startsAt endsAt ticketLimit ticketPrice metadataURI createdAt")
+        .select(
+          "eventId creatorWalletAddress startsAt endsAt ticketLimit ticketPrice metadataURI createdAt",
+        )
         .sort({ startsAt: 1, _id: 1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -336,5 +341,98 @@ export async function cancelEvent(req, res) {
     console.error("Event cancellation failed:", error);
 
     return res.status(500).json({ message: "Could not cancel event" });
+  }
+}
+
+export async function claimTicket(req, res) {
+  if (req.user.role !== "attendee") {
+    return res.status(403).json({ message: "Attendee access required" });
+  }
+  if (!req.user.walletAddress) {
+    return res
+      .status(400)
+      .json({ message: "Link a wallet before claiming tickets" });
+  }
+
+  try {
+    const eventId = parseUnsignedInteger(
+      req.params.eventId,
+      "eventId",
+      UINT256_MAX,
+    ).toString();
+    const event = await eventModel.findOne({ eventId });
+    if (!event) return res.status(404).json({ message: "Event not found" });
+    if (event.cancelled)
+      return res.status(409).json({ message: "Event is cancelled" });
+    if (event.endsAt <= Math.floor(Date.now() / 1000)) {
+      return res.status(409).json({ message: "Event has ended" });
+    }
+
+    if (!req.body?.transactionHash) {
+      const prepared = await prepareClaimTicket(
+        req.user.walletAddress,
+        eventId,
+      );
+      return res.status(200).json({
+        message:
+          "Sign and submit this transaction, then send its hash to finish claiming the ticket",
+        eventId,
+        ticketPrice: prepared.ticketPrice,
+        walletAddress: prepared.walletAddress,
+        transaction: prepared.transaction,
+      });
+    }
+
+    const verified = await verifyClaimTicket(
+      req.body.transactionHash,
+      req.user.walletAddress,
+      eventId,
+    );
+    const txHash = verified.txHash.toLowerCase();
+    let ticket;
+    try {
+      ticket = await ticketModel.findOneAndUpdate(
+        { transactionHash: txHash },
+        {
+          $setOnInsert: {
+            ticketId: verified.ticketId,
+            eventId: verified.eventId,
+            event: event._id,
+            attendee: req.user._id,
+            attendeeWalletAddress: verified.walletAddress.toLowerCase(),
+            transactionHash: txHash,
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+    } catch (error) {
+      if (error?.code === 11000) {
+        return res
+          .status(409)
+          .json({ message: "This ticket or transaction is already recorded" });
+      }
+      throw error;
+    }
+
+    return res.status(201).json({ message: "Ticket claimed", ticket });
+  } catch (error) {
+    const clientErrors = [
+      "eventId must be an unsigned integer",
+      "eventId is out of range",
+      "The attendee wallet address is invalid",
+      "Event not found on chain",
+      "Event is cancelled",
+      "Event has ended",
+      "A valid transaction hash is required",
+      "Transaction not found; wait for confirmation and retry",
+      "The ticket claim transaction failed",
+      "Transaction sender does not match the connected wallet",
+      "Transaction does not claim a ticket for this event and wallet",
+    ];
+    if (clientErrors.includes(error.message)) {
+      return res.status(400).json({ message: error.message });
+    }
+    console.error("Ticket claim failed:", error);
+    return res.status(500).json({ message: "Could not claim ticket" });
   }
 }

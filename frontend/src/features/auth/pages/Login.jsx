@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate, useLocation, Link } from "react-router";
 import Navbar from "../../../components/Navbar";
 import Footer from "../../../components/Footer";
 import { useAuth } from "../hooks/useAuth.js";
@@ -7,6 +7,7 @@ import { useAuth } from "../hooks/useAuth.js";
 const Login = () => {
   const { loading, handleLogin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,7 +18,7 @@ const Login = () => {
     const success = await handleLogin({ email, password });
 
     if (success) {
-      navigate("/");
+      navigate(location.state?.from || "/", { replace: true });
     }
   };
 

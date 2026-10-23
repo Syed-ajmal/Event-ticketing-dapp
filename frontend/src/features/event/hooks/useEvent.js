@@ -1,8 +1,10 @@
 import { useCallback, useContext } from "react";
 import { EventContext } from "../event.context.jsx";
 import { useWallet } from "../../wallet/hooks/useWallet.js";
+import { useAuth } from "../../auth/hooks/useAuth.js";
 import {
   cancelEvent as cancelEventRequest,
+  claimEventTicket,
   createEvent,
   getMyEvents,
   getPublicEvents,
@@ -32,6 +34,7 @@ const waitForTransactionReceipt = async (ethereum, transactionHash) => {
 export const useEvent = () => {
   const context = useContext(EventContext);
   const { walletAddress, isLinked } = useWallet();
+  const { user } = useAuth();
 
   if (!context) {
     throw new Error("useEvent must be used within an EventProvider");
@@ -160,6 +163,65 @@ export const useEvent = () => {
     }
   };
 
+  const handleClaimTicket = async (eventId) => {
+    setError(null);
+
+    try {
+      if (!user) throw new Error("Log in before claiming a ticket.");
+      if (user.role !== "attendee") {
+        throw new Error("Only attendee accounts can claim tickets.");
+      }
+      if (!walletAddress || !isLinked) {
+        throw new Error("Link a wallet to your attendee account before claiming.");
+      }
+
+      const ethereum = window.ethereum;
+      if (!ethereum?.request) {
+        throw new Error("No browser wallet found. Install or enable one to continue.");
+      }
+
+      const prepared = await claimEventTicket(eventId);
+      if (!prepared?.transaction) return prepared;
+
+      const [account] = await ethereum.request({ method: "eth_requestAccounts" });
+      const expectedWallet = prepared.walletAddress || walletAddress;
+      if (!account || account.toLowerCase() !== expectedWallet.toLowerCase()) {
+        throw new Error("Switch your wallet to the address linked to your attendee account.");
+      }
+
+      const expectedChainId = `0x${BigInt(prepared.transaction.chainId).toString(16)}`;
+      const currentChainId = await ethereum.request({ method: "eth_chainId" });
+      if (currentChainId.toLowerCase() !== expectedChainId.toLowerCase()) {
+        await ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: expectedChainId }],
+        });
+      }
+
+      const transaction = {
+        from: account,
+        to: prepared.transaction.to,
+        data: prepared.transaction.data,
+      };
+      if (prepared.transaction.value !== undefined) {
+        transaction.value = `0x${BigInt(prepared.transaction.value).toString(16)}`;
+      }
+
+      const transactionHash = await ethereum.request({
+        method: "eth_sendTransaction",
+        params: [transaction],
+      });
+
+      await waitForTransactionReceipt(ethereum, transactionHash);
+      return await claimEventTicket(eventId, transactionHash);
+    } catch (err) {
+      setError(
+        err.response?.data?.message || err.message || "Could not claim ticket.",
+      );
+      return null;
+    }
+  };
+
   return {
     event,
     events,
@@ -171,5 +233,6 @@ export const useEvent = () => {
     handleListPublicEvents,
     handleCreateEvent,
     handleCancelEvent,
+    handleClaimTicket,
   };
 };

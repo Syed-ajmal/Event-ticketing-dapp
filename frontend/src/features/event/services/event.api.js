@@ -79,3 +79,12 @@ export async function cancelEvent(eventId, transactionHash) {
 
   return response.data;
 }
+
+export async function claimEventTicket(eventId, transactionHash) {
+  const response = await api.post(
+    `/api/event/${eventId}/claim-ticket`,
+    transactionHash ? { transactionHash } : {},
+  );
+
+  return response.data;
+}

@@ -286,3 +286,80 @@ export async function verifyCancelEvent(txHash, walletAddress, eventId) {
   }
   return { walletAddress: normalizedAddress, txHash: receipt.hash };
 }
+
+export async function prepareClaimTicket(walletAddress, eventId) {
+  if (!isAddress(walletAddress)) {
+    throw new Error("The attendee wallet address is invalid");
+  }
+
+  const normalizedAddress = getAddress(walletAddress);
+  const eventInfo = await eventTicketing.getFunction("getEvent")(eventId);
+  if (eventInfo.creator === "0x0000000000000000000000000000000000000000") {
+    throw new Error("Event not found on chain");
+  }
+  if (eventInfo.cancelled) throw new Error("Event is cancelled");
+  if (eventInfo.endsAt <= BigInt(Math.floor(Date.now() / 1000))) {
+    throw new Error("Event has ended");
+  }
+
+  return {
+    walletAddress: normalizedAddress,
+    ticketPrice: eventInfo.ticketPrice.toString(),
+    transaction: {
+      to: getAddress(config.EVENT_CONTRACT_ADDRESS),
+      data: eventTicketingInterface.encodeFunctionData("claimTicket", [eventId]),
+      value: eventInfo.ticketPrice.toString(),
+      chainId: (await provider.getNetwork()).chainId.toString(),
+    },
+  };
+}
+
+export async function verifyClaimTicket(txHash, walletAddress, eventId) {
+  if (!isAddress(walletAddress)) {
+    throw new Error("The attendee wallet address is invalid");
+  }
+  if (typeof txHash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+    throw new Error("A valid transaction hash is required");
+  }
+
+  const normalizedAddress = getAddress(walletAddress);
+  const tx = await provider.getTransaction(txHash);
+  const receipt = await provider.getTransactionReceipt(txHash);
+  if (!tx || !receipt) {
+    throw new Error("Transaction not found; wait for confirmation and retry");
+  }
+  if (receipt.status !== 1) throw new Error("The ticket claim transaction failed");
+  if (!tx.from || getAddress(tx.from) !== normalizedAddress) {
+    throw new Error("Transaction sender does not match the connected wallet");
+  }
+
+  let claimedTicketId = null;
+  for (const log of receipt.logs) {
+    if (getAddress(log.address) !== getAddress(config.EVENT_CONTRACT_ADDRESS)) {
+      continue;
+    }
+    try {
+      const parsed = eventTicketingInterface.parseLog(log);
+      if (
+        parsed?.name === "TicketClaimed" &&
+        parsed.args.eventId === BigInt(eventId) &&
+        getAddress(parsed.args.attendee) === normalizedAddress
+      ) {
+        claimedTicketId = parsed.args.ticketId.toString();
+        break;
+      }
+    } catch {
+      // Ignore logs that are not valid events from this contract.
+    }
+  }
+
+  if (claimedTicketId === null) {
+    throw new Error("Transaction does not claim a ticket for this event and wallet");
+  }
+  return {
+    eventId: eventId.toString(),
+    ticketId: claimedTicketId,
+    walletAddress: normalizedAddress,
+    txHash: receipt.hash,
+  };
+}

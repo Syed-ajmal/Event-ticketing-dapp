@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import Footer from "../../../components/Footer.jsx";
 import Navbar from "../../../components/Navbar.jsx";
 import { useEvent } from "../hooks/useEvent.js";
 import { getEventMetadata, resolveIpfsUrl } from "../services/event.api.js";
+import { useAuth } from "../../auth/hooks/useAuth.js";
+import { useWallet } from "../../wallet/hooks/useWallet.js";
 
 const formatDate = (timestamp) =>
   new Date(Number(timestamp) * 1000).toLocaleString(undefined, {
@@ -25,12 +28,29 @@ const formatEth = (wei) => {
 };
 
 const PublicEvents = () => {
-  const { loading, error, handleListPublicEvents } = useEvent();
+  const {
+    loading,
+    error,
+    handleListPublicEvents,
+    handleClaimTicket,
+  } = useEvent();
+  const { user, loading: authLoading } = useAuth();
+  const {
+    isLinked,
+    connecting,
+    error: walletError,
+    connectWallet,
+  } = useWallet();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [page, setPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [eventCards, setEventCards] = useState([]);
   const [metadataLoading, setMetadataLoading] = useState(true);
+  const [listFailed, setListFailed] = useState(false);
+  const [claimingEventId, setClaimingEventId] = useState(null);
+  const [claimedTickets, setClaimedTickets] = useState({});
 
   useEffect(() => {
     let active = true;
@@ -42,10 +62,12 @@ const PublicEvents = () => {
 
       if (!result?.events) {
         setEventCards([]);
+        setListFailed(true);
         setMetadataLoading(false);
         return;
       }
 
+      setListFailed(false);
       setTotalPages(Math.max(1, result.totalPages || 1));
       const cards = await Promise.all(
         result.events.map(async (event) => {
@@ -72,6 +94,35 @@ const PublicEvents = () => {
 
   const pageLoading = loading || metadataLoading;
 
+  const onClaimTicket = async (event) => {
+    if (!user) {
+      navigate("/login", {
+        state: { from: `${location.pathname}${location.search}` },
+      });
+      return;
+    }
+
+    if (user.role !== "attendee") return;
+
+    if (!isLinked) {
+      connectWallet().catch(() => {});
+      return;
+    }
+
+    setClaimingEventId(event.eventId);
+    try {
+      const result = await handleClaimTicket(event.eventId);
+      if (result?.ticket) {
+        setClaimedTickets((current) => ({
+          ...current,
+          [event.eventId]: result.ticket,
+        }));
+      }
+    } finally {
+      setClaimingEventId(null);
+    }
+  };
+
   return (
     <main className="flex min-h-screen flex-col bg-[#f5f7fb] text-slate-900">
       <Navbar />
@@ -85,10 +136,17 @@ const PublicEvents = () => {
         {error && (
           <div className="mt-7 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700" role="alert">
             {error}
-            <button type="button" onClick={() => setReloadKey((current) => current + 1)} className="ml-3 font-semibold underline">
-              Retry
-            </button>
+            {listFailed && (
+              <button type="button" onClick={() => setReloadKey((current) => current + 1)} className="ml-3 font-semibold underline">
+                Retry loading events
+              </button>
+            )}
           </div>
+        )}
+        {walletError && (
+          <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700" role="alert">
+            {walletError}
+          </p>
         )}
 
         {pageLoading ? (
@@ -135,6 +193,32 @@ const PublicEvents = () => {
                       <dd className="mt-1 font-medium">{formatEth(event.ticketPrice)}</dd>
                     </div>
                   </dl>
+                  {claimedTickets[event.eventId] ? (
+                    <p className="mt-5 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700" role="status">
+                      Ticket #{claimedTickets[event.eventId].ticketId} claimed
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onClaimTicket(event)}
+                      disabled={authLoading || connecting || claimingEventId !== null || Boolean(user && user.role !== "attendee")}
+                      className="mt-5 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {authLoading
+                        ? "Checking account…"
+                        : !user
+                          ? "Log in to claim"
+                          : user.role !== "attendee"
+                            ? "Attendees only"
+                            : connecting
+                              ? "Linking wallet…"
+                              : !isLinked
+                                ? "Link wallet to claim"
+                                : claimingEventId === event.eventId
+                                  ? "Claiming ticket…"
+                                  : "Claim ticket"}
+                    </button>
+                  )}
                 </div>
               </article>
             ))}

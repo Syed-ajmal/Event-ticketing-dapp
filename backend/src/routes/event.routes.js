@@ -41,4 +41,13 @@ eventRouter.patch(
   eventController.cancelEvent,
 );
 
+/**
+ * POST /api/event/:eventId/claim-ticket
+ */
+eventRouter.post(
+  "/:eventId/claim-ticket",
+  authMiddleware.authUser,
+  eventController.claimTicket,
+);
+
 export default eventRouter;
