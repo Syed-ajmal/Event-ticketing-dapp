@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { QRCodeSVG } from "qrcode.react";
 import Footer from "../../../components/Footer.jsx";
 import Navbar from "../../../components/Navbar.jsx";
 import { useEvent } from "../hooks/useEvent.js";
@@ -18,6 +19,7 @@ const YourTickets = () => {
   const [tickets, setTickets] = useState([]);
   const [metadataLoading, setMetadataLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [shownQrTicketId, setShownQrTicketId] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -92,6 +94,14 @@ const YourTickets = () => {
           <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {tickets.map((ticket) => {
               const event = ticket.event;
+              // Keep on-chain uint IDs as strings so large values are never rounded.
+              const checkInPayload = JSON.stringify({
+                type: "event-ticket",
+                version: 1,
+                eventId: String(event?.eventId ?? ticket.eventId),
+                ticketId: String(ticket.ticketId),
+              });
+
               return (
                 <article key={ticket._id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                   {ticket.metadata?.image ? (
@@ -135,6 +145,37 @@ const YourTickets = () => {
                         <dd className="mt-1 break-all font-mono text-xs text-slate-600">{ticket.transactionHash}</dd>
                       </div>
                     </dl>
+                    <button
+                      type="button"
+                      aria-expanded={shownQrTicketId === String(ticket.ticketId)}
+                      aria-controls={`ticket-qr-${ticket.ticketId}`}
+                      onClick={() =>
+                        setShownQrTicketId((current) =>
+                          current === String(ticket.ticketId)
+                            ? null
+                            : String(ticket.ticketId),
+                        )
+                      }
+                      className="mt-5 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                    >
+                      {shownQrTicketId === String(ticket.ticketId) ? "Hide QR" : "Show QR"}
+                    </button>
+                    {shownQrTicketId === String(ticket.ticketId) && (
+                      <div
+                        id={`ticket-qr-${ticket.ticketId}`}
+                        className="mt-4 flex flex-col items-center rounded-xl border border-slate-200 bg-slate-50 p-4 text-center"
+                      >
+                        <QRCodeSVG
+                          value={checkInPayload}
+                          size={192}
+                          level="M"
+                          title={`Check-in QR code for ${ticket.metadata?.name || `event ${ticket.eventId}`}, ticket ${ticket.ticketId}`}
+                          className="h-48 w-48 max-w-full rounded-lg bg-white p-2"
+                        />
+                        <p className="mt-3 font-semibold text-slate-800">Present this QR code at check-in</p>
+                        <p className="mt-1 text-xs text-slate-500">It identifies this ticket and its event.</p>
+                      </div>
+                    )}
                   </div>
                 </article>
               );
