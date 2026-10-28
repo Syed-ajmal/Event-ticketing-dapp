@@ -226,8 +226,8 @@ const PublicEvents = () => {
                               : !isLinked
                                 ? "Link wallet to claim"
                                 : claimingEventId === event.eventId
-                                  ? "Claiming ticket…"
-                                  : "Claim ticket"}
+                                  ? "Buying ticket…"
+                                  : "Buy ticket"}
                     </button>
                   )}
                   </div>
