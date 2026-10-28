@@ -26,6 +26,7 @@ const formatEth = (wei) => {
 };
 
 const getStatus = (event) => {
+  if (event.proceedsWithdrawn) return "Withdrawn";
   if (event.cancelled) return "Cancelled";
   const now = Math.floor(Date.now() / 1000);
   if (Number(event.endsAt) <= now) return "Ended";
@@ -39,11 +40,13 @@ const YourEvents = () => {
     error,
     handleListMyEvents,
     handleCancelEvent,
+    handleWithdrawProceeds,
   } = useEvent();
   const [eventCards, setEventCards] = useState([]);
   const [metadataLoading, setMetadataLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [cancellingEventId, setCancellingEventId] = useState(null);
+  const [withdrawingEventId, setWithdrawingEventId] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -105,6 +108,29 @@ const YourEvents = () => {
     }
   };
 
+  const withdrawProceeds = async (event) => {
+    const name = event.metadata?.name || `Event #${event.eventId}`;
+    if (!window.confirm(`Withdraw the available ticket proceeds for “${name}”? This can only be done once.`)) {
+      return;
+    }
+
+    setWithdrawingEventId(String(event.eventId));
+    try {
+      const result = await handleWithdrawProceeds(event.eventId);
+      if (result?.event) {
+        setEventCards((current) =>
+          current.map((card) =>
+            String(card.eventId) === String(result.event.eventId)
+              ? { ...card, ...result.event, metadata: card.metadata }
+              : card,
+          ),
+        );
+      }
+    } finally {
+      setWithdrawingEventId(null);
+    }
+  };
+
   return (
     <main className="flex min-h-screen flex-col bg-[#f5f7fb] text-slate-900">
       <Navbar />
@@ -139,28 +165,28 @@ const YourEvents = () => {
             {eventCards.map((event) => {
               const status = getStatus(event);
               return (
-                <article key={event._id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <article key={event._id} className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                   {event.metadata?.image ? (
-                    <img src={resolveIpfsUrl(event.metadata.image)} alt="" className="h-48 w-full bg-slate-100 object-cover" />
+                    <img src={resolveIpfsUrl(event.metadata.image)} alt="" className="h-36 w-full shrink-0 bg-slate-100 object-cover" />
                   ) : (
-                    <div className="grid h-40 place-items-center bg-gradient-to-br from-indigo-100 to-cyan-100 text-4xl font-bold text-indigo-500" aria-hidden="true">
+                    <div className="grid h-36 shrink-0 place-items-center bg-gradient-to-br from-indigo-100 to-cyan-100 text-4xl font-bold text-indigo-500" aria-hidden="true">
                       {(event.metadata?.name || "E").slice(0, 1).toUpperCase()}
                     </div>
                   )}
-                  <div className="p-5">
+                  <div className="flex flex-1 flex-col p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <h2 className="text-xl font-bold">{event.metadata?.name || `Event #${event.eventId}`}</h2>
-                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${status === "Cancelled" ? "bg-rose-50 text-rose-700" : status === "Live" ? "bg-emerald-50 text-emerald-700" : "bg-indigo-50 text-indigo-700"}`}>
+                      <h2 className="line-clamp-1 text-lg font-bold">{event.metadata?.name || `Event #${event.eventId}`}</h2>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${status === "Cancelled" ? "bg-rose-50 text-rose-700" : status === "Live" || status === "Withdrawn" ? "bg-emerald-50 text-emerald-700" : status === "Ended" ? "bg-slate-100 text-slate-700" : "bg-indigo-50 text-indigo-700"}`}>
                         {status}
                       </span>
                     </div>
                     {event.metadata?.description ? (
-                      <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{event.metadata.description}</p>
+                      <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-600">{event.metadata.description}</p>
                     ) : event.metadataError ? (
                       <p className="mt-2 text-sm text-slate-500">Event metadata couldn’t be loaded.</p>
                     ) : null}
                     {event.metadata?.venue && <p className="mt-3 text-sm text-slate-600">{event.metadata.venue}</p>}
-                    <dl className="mt-5 grid grid-cols-2 gap-x-3 gap-y-4 border-t border-slate-100 pt-4 text-sm">
+                    <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-slate-100 pt-3 text-sm">
                       <div>
                         <dt className="text-slate-500">Starts</dt>
                         <dd className="mt-1 font-medium">{formatDate(event.startsAt)}</dd>
@@ -178,16 +204,46 @@ const YourEvents = () => {
                         <dd className="mt-1 font-medium">{formatEth(event.ticketPrice)}</dd>
                       </div>
                     </dl>
-                    {status === "Upcoming" && (
-                      <button
-                        type="button"
-                        onClick={() => cancelEvent(event)}
-                        disabled={cancellingEventId !== null}
-                        className="mt-5 w-full rounded-lg border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-wait disabled:opacity-60"
-                      >
-                        {cancellingEventId === event.eventId ? "Cancelling…" : "Cancel event"}
-                      </button>
-                    )}
+                    <div className="mt-auto space-y-3 pt-5">
+                      {status !== "Cancelled" && status !== "Ended" && (
+                        <Link
+                          to={`/events/${event.eventId}/check-in`}
+                          className="inline-flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500"
+                        >
+                          Check in attendees
+                        </Link>
+                      )}
+                      {event.proceedsWithdrawn && (
+                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                        <p className="font-semibold">
+                          Proceeds withdrawn{event.proceedsWithdrawalAmount ? ` · ${formatEth(event.proceedsWithdrawalAmount)}` : ""}
+                        </p>
+                        {event.proceedsWithdrawalTransactionHash && (
+                          <p className="mt-2 break-all font-mono text-xs">Transaction: {event.proceedsWithdrawalTransactionHash}</p>
+                        )}
+                        </div>
+                      )}
+                      {status === "Ended" && !event.cancelled && !event.proceedsWithdrawn && (
+                        <button
+                          type="button"
+                          onClick={() => withdrawProceeds(event)}
+                          disabled={withdrawingEventId !== null}
+                          className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-wait disabled:opacity-60"
+                        >
+                          {withdrawingEventId === String(event.eventId) ? "Withdrawing proceeds…" : "Withdraw proceeds"}
+                        </button>
+                      )}
+                      {status === "Upcoming" && (
+                        <button
+                          type="button"
+                          onClick={() => cancelEvent(event)}
+                          disabled={cancellingEventId !== null}
+                          className="w-full rounded-lg border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-wait disabled:opacity-60"
+                        >
+                          {cancellingEventId === event.eventId ? "Cancelling…" : "Cancel event"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </article>
               );

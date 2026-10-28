@@ -4,12 +4,15 @@ import { useWallet } from "../../wallet/hooks/useWallet.js";
 import { useAuth } from "../../auth/hooks/useAuth.js";
 import {
   cancelEvent as cancelEventRequest,
+  checkInEventTicket,
   claimEventTicket,
   createEvent,
   getMyEvents,
   getMyTickets,
   getPublicEvents,
+  refundEventTicket,
   uploadEventMetadata,
+  withdrawEventProceeds,
 } from "../services/event.api.js";
 
 const waitForTransactionReceipt = async (ethereum, transactionHash) => {
@@ -228,6 +231,185 @@ export const useEvent = () => {
     }
   };
 
+  const handleCheckInTicket = async (eventId, ticketId) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!user || user.role !== "creator") {
+        throw new Error("Only creators can check in tickets.");
+      }
+      if (!walletAddress || !isLinked) {
+        throw new Error("Connect the wallet linked to your creator account to check in tickets.");
+      }
+
+      const ethereum = window.ethereum;
+      if (!ethereum?.request) {
+        throw new Error("No browser wallet found. Install or enable one to continue.");
+      }
+
+      const prepared = await checkInEventTicket(eventId, ticketId);
+      if (!prepared?.transaction) return prepared;
+
+      const [account] = await ethereum.request({ method: "eth_requestAccounts" });
+      const expectedWallet = prepared.walletAddress || walletAddress;
+      if (!account || account.toLowerCase() !== expectedWallet.toLowerCase()) {
+        throw new Error("Switch your wallet to the address linked to your creator account.");
+      }
+
+      const expectedChainId = `0x${BigInt(prepared.transaction.chainId).toString(16)}`;
+      const currentChainId = await ethereum.request({ method: "eth_chainId" });
+      if (currentChainId.toLowerCase() !== expectedChainId.toLowerCase()) {
+        await ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: expectedChainId }],
+        });
+      }
+
+      const transactionHash = await ethereum.request({
+        method: "eth_sendTransaction",
+        params: [{
+          from: account,
+          to: prepared.transaction.to,
+          data: prepared.transaction.data,
+        }],
+      });
+
+      await waitForTransactionReceipt(ethereum, transactionHash);
+      return await checkInEventTicket(eventId, ticketId, transactionHash);
+    } catch (err) {
+      setError(
+        err.response?.data?.message || err.message || "Could not check in ticket.",
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefundTicket = async (eventId, ticketId) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!user || !["attendee", "creator"].includes(user.role)) {
+        throw new Error("Log in with the account that claimed this ticket to refund it.");
+      }
+      if (!walletAddress || !isLinked) {
+        throw new Error("Connect the wallet linked to the account that owns this ticket.");
+      }
+
+      const ethereum = window.ethereum;
+      if (!ethereum?.request) {
+        throw new Error("No browser wallet found. Install or enable one to continue.");
+      }
+
+      const prepared = await refundEventTicket(eventId, ticketId);
+      if (!prepared?.transaction) return prepared;
+
+      const [account] = await ethereum.request({ method: "eth_requestAccounts" });
+      const expectedWallet = prepared.walletAddress || walletAddress;
+      if (!account || account.toLowerCase() !== expectedWallet.toLowerCase()) {
+        throw new Error("Switch to the wallet that owns this ticket.");
+      }
+
+      const expectedChainId = `0x${BigInt(prepared.transaction.chainId).toString(16)}`;
+      const currentChainId = await ethereum.request({ method: "eth_chainId" });
+      if (currentChainId.toLowerCase() !== expectedChainId.toLowerCase()) {
+        await ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: expectedChainId }],
+        });
+      }
+
+      const transactionHash = await ethereum.request({
+        method: "eth_sendTransaction",
+        params: [{
+          from: account,
+          to: prepared.transaction.to,
+          data: prepared.transaction.data,
+        }],
+      });
+
+      await waitForTransactionReceipt(ethereum, transactionHash);
+      return await refundEventTicket(eventId, ticketId, transactionHash);
+    } catch (err) {
+      setError(
+        err.response?.data?.message || err.message || "Could not refund ticket.",
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWithdrawProceeds = async (eventId) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!user || user.role !== "creator") {
+        throw new Error("Only creators can withdraw event proceeds.");
+      }
+      if (!walletAddress || !isLinked) {
+        throw new Error("Connect the wallet linked to your creator account to withdraw proceeds.");
+      }
+
+      const ethereum = window.ethereum;
+      if (!ethereum?.request) {
+        throw new Error("No browser wallet found. Install or enable one to continue.");
+      }
+
+      const prepared = await withdrawEventProceeds(eventId);
+      if (!prepared?.transaction) return prepared;
+
+      const [account] = await ethereum.request({ method: "eth_requestAccounts" });
+      const expectedWallet = prepared.walletAddress || walletAddress;
+      if (!account || account.toLowerCase() !== expectedWallet.toLowerCase()) {
+        throw new Error("Switch your wallet to the address linked to your creator account.");
+      }
+
+      const expectedChainId = `0x${BigInt(prepared.transaction.chainId).toString(16)}`;
+      const currentChainId = await ethereum.request({ method: "eth_chainId" });
+      if (currentChainId.toLowerCase() !== expectedChainId.toLowerCase()) {
+        await ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: expectedChainId }],
+        });
+      }
+
+      const transactionHash = await ethereum.request({
+        method: "eth_sendTransaction",
+        params: [{
+          from: account,
+          to: prepared.transaction.to,
+          data: prepared.transaction.data,
+        }],
+      });
+
+      await waitForTransactionReceipt(ethereum, transactionHash);
+      const result = await withdrawEventProceeds(eventId, transactionHash);
+      if (result?.event) {
+        setEvent(result.event);
+        setEvents((current) =>
+          current.map((item) =>
+            String(item.eventId) === String(result.event.eventId)
+              ? result.event
+              : item,
+          ),
+        );
+      }
+      return result;
+    } catch (err) {
+      setError(
+        err.response?.data?.message || err.message || "Could not withdraw event proceeds.",
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     event,
     events,
@@ -241,5 +423,8 @@ export const useEvent = () => {
     handleCreateEvent,
     handleCancelEvent,
     handleClaimTicket,
+    handleCheckInTicket,
+    handleRefundTicket,
+    handleWithdrawProceeds,
   };
 };

@@ -93,3 +93,30 @@ export async function claimEventTicket(eventId, transactionHash) {
 
   return response.data;
 }
+
+export async function checkInEventTicket(eventId, ticketId, transactionHash) {
+  const response = await api.post(`/api/event/${eventId}/check-in`, {
+    ticketId: String(ticketId),
+    ...(transactionHash ? { transactionHash } : {}),
+  });
+
+  return response.data;
+}
+
+export async function refundEventTicket(eventId, ticketId, transactionHash) {
+  const response = await api.post(`/api/event/${eventId}/refund-ticket`, {
+    ticketId: String(ticketId),
+    ...(transactionHash ? { transactionHash } : {}),
+  });
+
+  return response.data;
+}
+
+export async function withdrawEventProceeds(eventId, transactionHash) {
+  const response = await api.post(
+    `/api/event/${eventId}/withdraw-proceeds`,
+    transactionHash ? { transactionHash } : {},
+  );
+
+  return response.data;
+}

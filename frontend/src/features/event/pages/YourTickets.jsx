@@ -14,12 +14,27 @@ const formatDate = (value) => {
     : date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 };
 
+const formatWeiAsEth = (value) => {
+  try {
+    const wei = BigInt(value);
+    const whole = wei / 10n ** 18n;
+    const fraction = (wei % 10n ** 18n)
+      .toString()
+      .padStart(18, "0")
+      .replace(/0+$/, "");
+    return `${whole}${fraction ? `.${fraction}` : ""} ETH`;
+  } catch {
+    return `${value} wei`;
+  }
+};
+
 const YourTickets = () => {
-  const { loading, error, handleListMyTickets } = useEvent();
+  const { error, handleListMyTickets, handleRefundTicket } = useEvent();
   const [tickets, setTickets] = useState([]);
   const [metadataLoading, setMetadataLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [shownQrTicketId, setShownQrTicketId] = useState(null);
+  const [refundingTicketId, setRefundingTicketId] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -62,7 +77,40 @@ const YourTickets = () => {
     };
   }, [handleListMyTickets]);
 
-  const pageLoading = !hasLoaded || loading || metadataLoading;
+  const pageLoading = !hasLoaded || metadataLoading;
+
+  const refundTicket = async (ticket) => {
+    const eventName = ticket.metadata?.name || `Event #${ticket.eventId}`;
+    if (!window.confirm(`Refund your ticket for “${eventName}”? The ticket NFT will be burned and its ticket price returned to your wallet.`)) {
+      return;
+    }
+
+    setRefundingTicketId(String(ticket.ticketId));
+    try {
+      const result = await handleRefundTicket(ticket.eventId, ticket.ticketId);
+      if (result?.ticket) {
+        setTickets((current) =>
+          current.map((item) =>
+            String(item.ticketId) === String(ticket.ticketId)
+              ? {
+                  ...item,
+                  ...result.ticket,
+                  event: item.event,
+                  metadata: item.metadata,
+                  refunded: true,
+                  refundAmount: result.refundAmount,
+                  refundTransactionHash:
+                    result.ticket.refundTransactionHash || item.refundTransactionHash,
+                }
+              : item,
+          ),
+        );
+        setShownQrTicketId(null);
+      }
+    } finally {
+      setRefundingTicketId(null);
+    }
+  };
 
   return (
     <main className="flex min-h-screen flex-col bg-[#f5f7fb] text-slate-900">
@@ -114,8 +162,10 @@ const YourTickets = () => {
                   <div className="p-5">
                     <div className="flex items-start justify-between gap-3">
                       <h2 className="text-xl font-bold">{ticket.metadata?.name || `Event #${ticket.eventId}`}</h2>
-                      {event?.cancelled && (
-                        <span className="shrink-0 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">Cancelled</span>
+                      {(ticket.refunded || event?.cancelled) && (
+                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${ticket.refunded ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                          {ticket.refunded ? "Refunded" : "Cancelled"}
+                        </span>
                       )}
                     </div>
                     {ticket.metadata?.description ? (
@@ -145,7 +195,26 @@ const YourTickets = () => {
                         <dd className="mt-1 break-all font-mono text-xs text-slate-600">{ticket.transactionHash}</dd>
                       </div>
                     </dl>
-                    <button
+                    {event?.cancelled && ticket.refunded && (
+                      <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                        <p className="font-semibold">Refund completed{ticket.refundAmount ? ` · ${formatWeiAsEth(ticket.refundAmount)}` : ""}</p>
+                        {ticket.refundTransactionHash && (
+                          <p className="mt-2 break-all font-mono text-xs">Transaction: {ticket.refundTransactionHash}</p>
+                        )}
+                      </div>
+                    )}
+                    {event?.cancelled && !ticket.refunded && (
+                      <button
+                        type="button"
+                        onClick={() => refundTicket(ticket)}
+                        disabled={refundingTicketId !== null}
+                        className="mt-5 w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {refundingTicketId === String(ticket.ticketId) ? "Confirming refund…" : "Refund ticket"}
+                      </button>
+                    )}
+                    {!event?.cancelled && !ticket.refunded && (
+                      <button
                       type="button"
                       aria-expanded={shownQrTicketId === String(ticket.ticketId)}
                       aria-controls={`ticket-qr-${ticket.ticketId}`}
@@ -159,8 +228,9 @@ const YourTickets = () => {
                       className="mt-5 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
                     >
                       {shownQrTicketId === String(ticket.ticketId) ? "Hide QR" : "Show QR"}
-                    </button>
-                    {shownQrTicketId === String(ticket.ticketId) && (
+                      </button>
+                    )}
+                    {shownQrTicketId === String(ticket.ticketId) && !ticket.refunded && !event?.cancelled && (
                       <div
                         id={`ticket-qr-${ticket.ticketId}`}
                         className="mt-4 flex flex-col items-center rounded-xl border border-slate-200 bg-slate-50 p-4 text-center"

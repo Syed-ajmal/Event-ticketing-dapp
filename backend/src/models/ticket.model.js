@@ -27,6 +27,13 @@ const ticketSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
     },
+    checkedIn: { type: Boolean, default: false, index: true },
+    checkedInAt: Date,
+    checkInTransactionHash: { type: String, lowercase: true },
+    refunded: { type: Boolean, default: false, index: true },
+    refundedAt: Date,
+    refundAmount: String,
+    refundTransactionHash: { type: String, lowercase: true },
   },
   { timestamps: true },
 );

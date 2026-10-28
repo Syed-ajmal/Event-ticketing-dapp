@@ -8,6 +8,12 @@ import {
   verifyCancelEvent,
   verifyClaimTicket,
   verifyCreateEvent,
+  prepareCheckInTicket,
+  verifyCheckInTicket,
+  prepareRefundTicket,
+  verifyRefundTicket,
+  prepareWithdrawProceeds,
+  verifyWithdrawProceeds,
 } from "../services/eventTicketing.js";
 
 const UINT64_MAX = (1n << 64n) - 1n;
@@ -459,5 +465,224 @@ export async function claimTicket(req, res) {
     }
     console.error("Ticket claim failed:", error);
     return res.status(500).json({ message: "Could not claim ticket" });
+  }
+}
+
+export async function checkInTicket(req, res) {
+  if (req.user.role !== "creator") {
+    return res.status(403).json({ message: "Creator access required" });
+  }
+  if (!req.user.walletAddress) {
+    return res.status(400).json({ message: "Link a wallet before checking in tickets" });
+  }
+
+  try {
+    const eventId = parseUnsignedInteger(req.params.eventId, "eventId", UINT256_MAX).toString();
+    const ticketId = parseUnsignedInteger(req.body?.ticketId, "ticketId", UINT256_MAX).toString();
+    const event = await eventModel.findOne({ eventId, creator: req.user._id });
+    if (!event) return res.status(404).json({ message: "Event not found" });
+    if (event.creatorWalletAddress !== req.user.walletAddress.toLowerCase()) {
+      return res.status(403).json({ message: "Event must be checked in by its creating wallet" });
+    }
+
+    const ticket = await ticketModel.findOne({ ticketId, eventId });
+    if (!ticket) return res.status(404).json({ message: "Ticket not found for this event" });
+    if (ticket.checkedIn) return res.status(409).json({ message: "Ticket is already checked in" });
+
+    if (!req.body?.transactionHash) {
+      const prepared = await prepareCheckInTicket(req.user.walletAddress, eventId, ticketId);
+      return res.status(200).json({
+        message: "Sign and submit this transaction, then send its hash to finish check-in",
+        eventId,
+        ticketId,
+        walletAddress: prepared.walletAddress,
+        transaction: prepared.transaction,
+      });
+    }
+
+    const verified = await verifyCheckInTicket(
+      req.body.transactionHash,
+      req.user.walletAddress,
+      eventId,
+      ticketId,
+    );
+    const txHash = verified.txHash.toLowerCase();
+    const updatedTicket = await ticketModel.findOneAndUpdate(
+      { _id: ticket._id, checkedIn: false },
+      { $set: { checkedIn: true, checkedInAt: new Date(), checkInTransactionHash: txHash } },
+      { new: true },
+    );
+    if (!updatedTicket) {
+      const current = await ticketModel.findById(ticket._id).lean();
+      if (current?.checkInTransactionHash === txHash) {
+        return res.status(200).json({ message: "Ticket checked in", ticket: current });
+      }
+      return res.status(409).json({ message: "Ticket is already checked in" });
+    }
+    return res.status(200).json({ message: "Ticket checked in", ticket: updatedTicket });
+  } catch (error) {
+    const clientErrors = [
+      "eventId must be an unsigned integer", "eventId is out of range",
+      "ticketId must be an unsigned integer", "ticketId is out of range",
+      "The creator wallet address is invalid", "A valid transaction hash is required",
+      "Connected wallet is not the event creator", "Event not found on chain",
+      "Event is cancelled", "Check-in window is closed",
+      "Ticket is not for this event", "Ticket is already checked in",
+      "Transaction not found; wait for confirmation and retry",
+      "The ticket check-in transaction failed",
+      "Transaction sender does not match the connected wallet",
+      "Transaction does not check in the requested ticket",
+    ];
+    if (clientErrors.includes(error.message)) return res.status(400).json({ message: error.message });
+    console.error("Ticket check-in failed:", error);
+    return res.status(500).json({ message: "Could not check in ticket" });
+  }
+}
+
+export async function refundTicket(req, res) {
+  if (!["attendee", "creator"].includes(req.user.role)) {
+    return res.status(403).json({ message: "Attendee access required" });
+  }
+  if (!req.user.walletAddress) {
+    return res.status(400).json({ message: "Link a wallet before refunding tickets" });
+  }
+
+  try {
+    const eventId = parseUnsignedInteger(req.params.eventId, "eventId", UINT256_MAX).toString();
+    const ticketId = parseUnsignedInteger(req.body?.ticketId, "ticketId", UINT256_MAX).toString();
+    const event = await eventModel.findOne({ eventId });
+    if (!event) return res.status(404).json({ message: "Event not found" });
+    if (!event.cancelled) return res.status(409).json({ message: "Event is not cancelled" });
+
+    const ticket = await ticketModel.findOne({ ticketId, eventId, attendee: req.user._id });
+    if (!ticket) return res.status(404).json({ message: "Ticket not found for this account and event" });
+    if (ticket.attendeeWalletAddress !== req.user.walletAddress.toLowerCase()) {
+      return res.status(403).json({ message: "Connect the wallet that owns this ticket" });
+    }
+    if (ticket.refunded) return res.status(409).json({ message: "Ticket has already been refunded" });
+
+    if (!req.body?.transactionHash) {
+      const prepared = await prepareRefundTicket(req.user.walletAddress, eventId, ticketId);
+      return res.status(200).json({
+        message: "Sign and submit this transaction, then send its hash to finish the refund",
+        eventId,
+        ticketId,
+        walletAddress: prepared.walletAddress,
+        transaction: prepared.transaction,
+      });
+    }
+
+    const verified = await verifyRefundTicket(
+      req.body.transactionHash,
+      req.user.walletAddress,
+      eventId,
+      ticketId,
+    );
+    const txHash = verified.txHash.toLowerCase();
+    const updatedTicket = await ticketModel.findOneAndUpdate(
+      { _id: ticket._id, refunded: false },
+      { $set: {
+        refunded: true,
+        refundedAt: new Date(),
+        refundAmount: verified.refundAmount,
+        refundTransactionHash: txHash,
+      } },
+      { new: true },
+    );
+    if (!updatedTicket) {
+      const current = await ticketModel.findById(ticket._id).lean();
+      if (current?.refundTransactionHash === txHash) {
+        return res.status(200).json({ message: "Ticket refunded", refundAmount: verified.refundAmount, ticket: current });
+      }
+      return res.status(409).json({ message: "Ticket has already been refunded" });
+    }
+    return res.status(200).json({ message: "Ticket refunded", refundAmount: verified.refundAmount, ticket: updatedTicket });
+  } catch (error) {
+    const clientErrors = [
+      "eventId must be an unsigned integer", "eventId is out of range",
+      "ticketId must be an unsigned integer", "ticketId is out of range",
+      "The attendee wallet address is invalid", "Event not found on chain",
+      "Event is not cancelled", "Ticket is not for this event",
+      "Connected wallet does not own this ticket", "A valid transaction hash is required",
+      "Transaction not found; wait for confirmation and retry",
+      "The ticket refund transaction failed",
+      "Transaction sender does not match the connected wallet",
+      "Transaction does not refund the requested ticket",
+    ];
+    if (clientErrors.includes(error.message)) return res.status(400).json({ message: error.message });
+    console.error("Ticket refund failed:", error);
+    return res.status(500).json({ message: "Could not refund ticket" });
+  }
+}
+
+export async function withdrawProceeds(req, res) {
+  if (req.user.role !== "creator") {
+    return res.status(403).json({ message: "Creator access required" });
+  }
+  if (!req.user.walletAddress) {
+    return res.status(400).json({ message: "Link a wallet before withdrawing proceeds" });
+  }
+
+  try {
+    const eventId = parseUnsignedInteger(req.params.eventId, "eventId", UINT256_MAX).toString();
+    const event = await eventModel.findOne({ eventId, creator: req.user._id });
+    if (!event) return res.status(404).json({ message: "Event not found" });
+    if (event.creatorWalletAddress !== req.user.walletAddress.toLowerCase()) {
+      return res.status(403).json({ message: "Proceeds must be withdrawn by the event-creating wallet" });
+    }
+
+    if (!req.body?.transactionHash) {
+      if (event.proceedsWithdrawn) {
+        return res.status(409).json({ message: "Proceeds have already been withdrawn" });
+      }
+      const prepared = await prepareWithdrawProceeds(req.user.walletAddress, eventId);
+      return res.status(200).json({
+        message: "Sign and submit this transaction, then send its hash to confirm the withdrawal",
+        eventId,
+        amount: prepared.amount,
+        walletAddress: prepared.walletAddress,
+        transaction: prepared.transaction,
+      });
+    }
+
+    const verified = await verifyWithdrawProceeds(
+      req.body.transactionHash,
+      req.user.walletAddress,
+      eventId,
+    );
+    const txHash = verified.txHash.toLowerCase();
+    const updatedEvent = await eventModel.findOneAndUpdate(
+      { _id: event._id, proceedsWithdrawn: { $ne: true } },
+      { $set: {
+        proceedsWithdrawn: true,
+        proceedsWithdrawnAt: new Date(),
+        proceedsWithdrawalAmount: verified.amount,
+        proceedsWithdrawalTransactionHash: txHash,
+      } },
+      { new: true },
+    );
+    if (!updatedEvent) {
+      const current = await eventModel.findById(event._id).lean();
+      if (current?.proceedsWithdrawalTransactionHash === txHash) {
+        return res.status(200).json({ message: "Proceeds withdrawn", amount: verified.amount, event: current });
+      }
+      return res.status(409).json({ message: "Proceeds have already been withdrawn" });
+    }
+    return res.status(200).json({ message: "Proceeds withdrawn", amount: verified.amount, event: updatedEvent });
+  } catch (error) {
+    const clientErrors = [
+      "eventId must be an unsigned integer", "eventId is out of range",
+      "The creator wallet address is invalid", "Event not found on chain",
+      "Connected wallet is not the event creator", "Cancelled event proceeds cannot be withdrawn",
+      "Event has not ended yet", "No proceeds available to withdraw",
+      "A valid transaction hash is required",
+      "Transaction not found; wait for confirmation and retry",
+      "The proceeds withdrawal transaction failed",
+      "Transaction sender does not match the connected wallet",
+      "Transaction does not withdraw proceeds for this event",
+    ];
+    if (clientErrors.includes(error.message)) return res.status(400).json({ message: error.message });
+    console.error("Proceeds withdrawal failed:", error);
+    return res.status(500).json({ message: "Could not withdraw proceeds" });
   }
 }

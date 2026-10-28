@@ -363,3 +363,185 @@ export async function verifyClaimTicket(txHash, walletAddress, eventId) {
     txHash: receipt.hash,
   };
 }
+
+export async function prepareCheckInTicket(walletAddress, eventId, ticketId) {
+  if (!isAddress(walletAddress)) throw new Error("The creator wallet address is invalid");
+  const normalizedAddress = getAddress(walletAddress);
+  const eventInfo = await eventTicketing.getFunction("getEvent")(eventId);
+  if (eventInfo.creator === "0x0000000000000000000000000000000000000000") {
+    throw new Error("Event not found on chain");
+  }
+  if (getAddress(eventInfo.creator) !== normalizedAddress) {
+    throw new Error("Connected wallet is not the event creator");
+  }
+  if (eventInfo.cancelled) throw new Error("Event is cancelled");
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  const opensBefore = await eventTicketing.CHECK_IN_OPENS_BEFORE();
+  if (now + opensBefore < eventInfo.startsAt || now > eventInfo.endsAt) {
+    throw new Error("Check-in window is closed");
+  }
+  if ((await eventTicketing.ticketEvent(ticketId)) !== BigInt(eventId)) {
+    throw new Error("Ticket is not for this event");
+  }
+  if (await eventTicketing.checkedIn(ticketId)) throw new Error("Ticket is already checked in");
+
+  // Simulate the call before asking the creator to spend gas. This also catches
+  // burned/nonexistent tickets (ownerOf reverts) and other contract conditions.
+  await eventTicketing.getFunction("checkIn").staticCall(eventId, ticketId, { from: normalizedAddress });
+  return {
+    walletAddress: normalizedAddress,
+    transaction: {
+      to: getAddress(config.EVENT_CONTRACT_ADDRESS),
+      data: eventTicketingInterface.encodeFunctionData("checkIn", [eventId, ticketId]),
+      chainId: (await provider.getNetwork()).chainId.toString(),
+    },
+  };
+}
+
+export async function verifyCheckInTicket(txHash, walletAddress, eventId, ticketId) {
+  if (!isAddress(walletAddress)) throw new Error("The creator wallet address is invalid");
+  if (typeof txHash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+    throw new Error("A valid transaction hash is required");
+  }
+  const normalizedAddress = getAddress(walletAddress);
+  const tx = await provider.getTransaction(txHash);
+  const receipt = await provider.getTransactionReceipt(txHash);
+  if (!tx || !receipt) throw new Error("Transaction not found; wait for confirmation and retry");
+  if (receipt.status !== 1) throw new Error("The ticket check-in transaction failed");
+  if (!tx.from || getAddress(tx.from) !== normalizedAddress) {
+    throw new Error("Transaction sender does not match the connected wallet");
+  }
+
+  const checkedIn = receipt.logs.some((log) => {
+    if (getAddress(log.address) !== getAddress(config.EVENT_CONTRACT_ADDRESS)) return false;
+    try {
+      const parsed = eventTicketingInterface.parseLog(log);
+      return parsed?.name === "TicketCheckedIn" &&
+        parsed.args.eventId === BigInt(eventId) &&
+        parsed.args.ticketId === BigInt(ticketId);
+    } catch {
+      return false;
+    }
+  });
+  if (!checkedIn) throw new Error("Transaction does not check in the requested ticket");
+  return { eventId: eventId.toString(), ticketId: ticketId.toString(), walletAddress: normalizedAddress, txHash: receipt.hash };
+}
+
+export async function prepareRefundTicket(walletAddress, eventId, ticketId) {
+  if (!isAddress(walletAddress)) throw new Error("The attendee wallet address is invalid");
+  const normalizedAddress = getAddress(walletAddress);
+  const eventInfo = await eventTicketing.getFunction("getEvent")(eventId);
+  if (eventInfo.creator === "0x0000000000000000000000000000000000000000") {
+    throw new Error("Event not found on chain");
+  }
+  if (!eventInfo.cancelled) throw new Error("Event is not cancelled");
+  if ((await eventTicketing.ticketEvent(ticketId)) !== BigInt(eventId)) {
+    throw new Error("Ticket is not for this event");
+  }
+  const owner = await eventTicketing.ownerOf(ticketId);
+  if (getAddress(owner) !== normalizedAddress) {
+    throw new Error("Connected wallet does not own this ticket");
+  }
+  await eventTicketing.getFunction("refundTicket").staticCall(ticketId, { from: normalizedAddress });
+  return {
+    walletAddress: normalizedAddress,
+    transaction: {
+      to: getAddress(config.EVENT_CONTRACT_ADDRESS),
+      data: eventTicketingInterface.encodeFunctionData("refundTicket", [ticketId]),
+      chainId: (await provider.getNetwork()).chainId.toString(),
+    },
+  };
+}
+
+export async function verifyRefundTicket(txHash, walletAddress, eventId, ticketId) {
+  if (!isAddress(walletAddress)) throw new Error("The attendee wallet address is invalid");
+  if (typeof txHash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+    throw new Error("A valid transaction hash is required");
+  }
+  const normalizedAddress = getAddress(walletAddress);
+  const tx = await provider.getTransaction(txHash);
+  const receipt = await provider.getTransactionReceipt(txHash);
+  if (!tx || !receipt) throw new Error("Transaction not found; wait for confirmation and retry");
+  if (receipt.status !== 1) throw new Error("The ticket refund transaction failed");
+  if (!tx.from || getAddress(tx.from) !== normalizedAddress) {
+    throw new Error("Transaction sender does not match the connected wallet");
+  }
+  let refundAmount = null;
+  for (const log of receipt.logs) {
+    if (getAddress(log.address) !== getAddress(config.EVENT_CONTRACT_ADDRESS)) continue;
+    try {
+      const parsed = eventTicketingInterface.parseLog(log);
+      if (parsed?.name === "TicketRefunded" &&
+          parsed.args.eventId === BigInt(eventId) &&
+          parsed.args.ticketId === BigInt(ticketId) &&
+          getAddress(parsed.args.attendee) === normalizedAddress) {
+        refundAmount = parsed.args.amount.toString();
+        break;
+      }
+    } catch {
+      // Ignore logs that are not valid events from this contract.
+    }
+  }
+  if (refundAmount === null) throw new Error("Transaction does not refund the requested ticket");
+  return { eventId: eventId.toString(), ticketId: ticketId.toString(), refundAmount, walletAddress: normalizedAddress, txHash: receipt.hash };
+}
+
+export async function prepareWithdrawProceeds(walletAddress, eventId) {
+  if (!isAddress(walletAddress)) throw new Error("The creator wallet address is invalid");
+  const normalizedAddress = getAddress(walletAddress);
+  const eventInfo = await eventTicketing.getFunction("getEvent")(eventId);
+  if (eventInfo.creator === "0x0000000000000000000000000000000000000000") {
+    throw new Error("Event not found on chain");
+  }
+  if (getAddress(eventInfo.creator) !== normalizedAddress) {
+    throw new Error("Connected wallet is not the event creator");
+  }
+  if (eventInfo.cancelled) throw new Error("Cancelled event proceeds cannot be withdrawn");
+  if (BigInt(Math.floor(Date.now() / 1000)) < eventInfo.endsAt) {
+    throw new Error("Event has not ended yet");
+  }
+  const amount = await eventTicketing.pendingProceeds(eventId);
+  if (amount === 0n) throw new Error("No proceeds available to withdraw");
+  await eventTicketing.getFunction("withdrawProceeds").staticCall(eventId, { from: normalizedAddress });
+  return {
+    walletAddress: normalizedAddress,
+    amount: amount.toString(),
+    transaction: {
+      to: getAddress(config.EVENT_CONTRACT_ADDRESS),
+      data: eventTicketingInterface.encodeFunctionData("withdrawProceeds", [eventId]),
+      chainId: (await provider.getNetwork()).chainId.toString(),
+    },
+  };
+}
+
+export async function verifyWithdrawProceeds(txHash, walletAddress, eventId) {
+  if (!isAddress(walletAddress)) throw new Error("The creator wallet address is invalid");
+  if (typeof txHash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+    throw new Error("A valid transaction hash is required");
+  }
+  const normalizedAddress = getAddress(walletAddress);
+  const tx = await provider.getTransaction(txHash);
+  const receipt = await provider.getTransactionReceipt(txHash);
+  if (!tx || !receipt) throw new Error("Transaction not found; wait for confirmation and retry");
+  if (receipt.status !== 1) throw new Error("The proceeds withdrawal transaction failed");
+  if (!tx.from || getAddress(tx.from) !== normalizedAddress) {
+    throw new Error("Transaction sender does not match the connected wallet");
+  }
+  let amount = null;
+  for (const log of receipt.logs) {
+    if (getAddress(log.address) !== getAddress(config.EVENT_CONTRACT_ADDRESS)) continue;
+    try {
+      const parsed = eventTicketingInterface.parseLog(log);
+      if (parsed?.name === "ProceedsWithdrawn" &&
+          parsed.args.eventId === BigInt(eventId) &&
+          getAddress(parsed.args.creator) === normalizedAddress) {
+        amount = parsed.args.amount.toString();
+        break;
+      }
+    } catch {
+      // Ignore logs that are not valid events from this contract.
+    }
+  }
+  if (amount === null) throw new Error("Transaction does not withdraw proceeds for this event");
+  return { eventId: eventId.toString(), amount, walletAddress: normalizedAddress, txHash: receipt.hash };
+}

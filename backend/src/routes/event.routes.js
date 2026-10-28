@@ -59,4 +59,27 @@ eventRouter.post(
   eventController.claimTicket,
 );
 
+/**
+ * POST /api/event/:eventId/check-in { ticketId, transactionHash? }
+ */
+eventRouter.post(
+  "/:eventId/check-in",
+  authMiddleware.authUser,
+  eventController.checkInTicket,
+);
+
+/** POST /api/event/:eventId/refund-ticket { ticketId, transactionHash? } */
+eventRouter.post(
+  "/:eventId/refund-ticket",
+  authMiddleware.authUser,
+  eventController.refundTicket,
+);
+
+/** POST /api/event/:eventId/withdraw-proceeds { transactionHash? } */
+eventRouter.post(
+  "/:eventId/withdraw-proceeds",
+  authMiddleware.authUser,
+  eventController.withdrawProceeds,
+);
+
 export default eventRouter;

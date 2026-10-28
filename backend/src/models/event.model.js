@@ -30,6 +30,10 @@ const eventSchema = new mongoose.Schema(
     cancelled: { type: Boolean, default: false, index: true },
     cancellationTransactionHash: { type: String, lowercase: true },
     cancelledAt: Date,
+    proceedsWithdrawn: { type: Boolean, default: false },
+    proceedsWithdrawnAt: Date,
+    proceedsWithdrawalAmount: String,
+    proceedsWithdrawalTransactionHash: { type: String, lowercase: true },
   },
   { timestamps: true },
 );
