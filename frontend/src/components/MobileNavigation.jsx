@@ -54,13 +54,12 @@ const MobileNavigation = ({
           height: "max-content",
           maxHeight: "calc(100vh - 65px)",
         }}
-        className="overflow-y-auto border-l border-slate-200 bg-white px-5 py-6 shadow-2xl md:hidden"
+        className="overflow-y-auto border-l border-slate-200 bg-white px-4 py-3 shadow-2xl md:hidden"
       >
         <nav className="flex flex-col gap-1">
           {user ? (
             <>
-              <div className="my-3 border-t border-slate-100" />
-              <div className="px-3 py-3">
+              <div className="px-3 py-2">
                 <p className="text-sm font-semibold text-slate-900">{name}</p>
                 <p className="mt-0.5 text-xs capitalize text-slate-500">{user.role}</p>
               </div>
@@ -97,10 +96,10 @@ const MobileNavigation = ({
               {user.role === "creator" && (
                 <>
                   <Link to="/events/mine" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                    Your events
+                    My events
                   </Link>
                   <Link to="/tickets/mine" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                    Your tickets
+                    My tickets
                   </Link>
                   <Link to="/events/create" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                     Create event
@@ -110,7 +109,7 @@ const MobileNavigation = ({
               {user.role === "attendee" && (
                 <>
                   <Link to="/tickets/mine" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                    Your tickets
+                    My tickets
                   </Link>
                   <Link to="/creator/request" onClick={onClose} className="rounded-lg font-semibold px-3 py-3 text-sm text-slate-700 hover:bg-slate-50">
                     Become a creator

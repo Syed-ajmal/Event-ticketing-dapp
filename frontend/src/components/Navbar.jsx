@@ -62,14 +62,14 @@ const Navbar = () => {
         onClick={closeMobileMenu}
         className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-indigo-600"
       >
-        Your events
+        My events
       </Link>
       <Link
         to="/tickets/mine"
         onClick={closeMobileMenu}
         className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-indigo-600"
       >
-        Your tickets
+        My tickets
       </Link>
       <Link
         to="/events/create"
@@ -86,7 +86,7 @@ const Navbar = () => {
         onClick={closeMobileMenu}
         className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-indigo-600"
       >
-        Your tickets
+        My tickets
       </Link>
       <Link
         to="/creator/request"
@@ -126,7 +126,7 @@ const Navbar = () => {
         aria-label="Main navigation"
         className="relative mx-auto flex w-full max-w-screen-2xl items-center justify-between gap-2 px-2.5 py-3 min-[400px]:px-3 sm:px-6 lg:px-8"
       >
-        <div className="flex min-w-0 items-center gap-2 sm:gap-8">
+        <div className="flex min-w-0 items-center gap-3 min-[400px]:gap-4 sm:gap-8">
           <Link
             to="/"
             className="flex shrink-0 items-center gap-1.5 sm:gap-3"
@@ -144,14 +144,14 @@ const Navbar = () => {
             </span>
           </Link>
 
-          <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-6">
+          <div className="flex min-w-0 items-center gap-3 min-[400px]:gap-4 md:gap-6">
             <Link to="/events" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm">
               Events
             </Link>
             <a href="/#how-it-works" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm">
               How it works
             </a>
-            <a href="/#features" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm max-[399px]:hidden">
+            <a href="/#features" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm max-[520px]:hidden">
               Features
             </a>
           </div>
@@ -199,32 +199,12 @@ const Navbar = () => {
             )}
           </button>
         ) : (
-          <div className="flex shrink-0 items-center gap-1.5 min-[400px]:gap-2 sm:gap-3">
           <Link
             to="/login"
             className="shrink-0 rounded-lg bg-indigo-600 px-2 py-1.5 text-[10px] font-semibold text-white transition hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 min-[400px]:px-2.5 min-[400px]:text-xs sm:px-4 sm:py-2 sm:text-sm"
           >
             Log in
           </Link>
-          <button
-            type="button"
-            className="grid size-9 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 md:hidden"
-            aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-            aria-expanded={mobileMenuOpen}
-            aria-controls="mobile-navigation"
-            onClick={() => setMobileMenuOpen((open) => !open)}
-          >
-            {mobileMenuOpen ? (
-              <svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
-                <path d="m6 6 12 12M18 6 6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
-                <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            )}
-          </button>
-          </div>
         )}
 
       </nav>

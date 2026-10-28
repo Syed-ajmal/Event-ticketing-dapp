@@ -6,20 +6,25 @@ import { useAuth } from "../hooks/useAuth";
 
 const Register = () => {
   const navigate = useNavigate();
-  const { loading, handleRegister } = useAuth();
+  const { handleRegister } = useAuth();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submitHandler = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
-    const success = await handleRegister({ username, email, password });
-
-    if (success) {
-      navigate("/");
+    try {
+      const success = await handleRegister({ username, email, password });
+      if (success) {
+        navigate("/");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -41,15 +46,7 @@ const Register = () => {
             </h1>
           </div>
 
-          {loading ? (
-            <p
-              className="py-4 text-center text-sm font-medium text-slate-600"
-              role="status"
-            >
-              Creating your account…
-            </p>
-          ) : (
-            <form className="flex flex-col gap-4" onSubmit={submitHandler}>
+          <form className="flex flex-col gap-4" onSubmit={submitHandler}>
               <div className="flex flex-col gap-2">
                 <label
                   htmlFor="username"
@@ -132,12 +129,13 @@ const Register = () => {
 
               <button
                 type="submit"
-                className="mt-1 inline-flex h-11 items-center justify-center rounded-xl bg-indigo-600 px-5 font-semibold text-white shadow-lg shadow-indigo-950/15 transition hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 active:scale-[.99]"
+                disabled={isSubmitting}
+                aria-live="polite"
+                className="mt-1 inline-flex h-11 items-center justify-center rounded-xl bg-indigo-600 px-5 font-semibold text-white shadow-lg shadow-indigo-950/15 transition hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 active:scale-[.99] disabled:cursor-wait disabled:opacity-70"
               >
-                Create account
+                {isSubmitting ? "Creating account…" : "Create account"}
               </button>
-            </form>
-          )}
+          </form>
 
           <p className="mt-6 text-center text-sm text-slate-600">
             Already have an account?{" "}

@@ -154,7 +154,7 @@ const YourEvents = () => {
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">Creator dashboard</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Your events</h1>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">My events</h1>
             <p className="mt-2 text-slate-600">Manage and review the events you’ve created.</p>
           </div>
           <Link to="/events/create" className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-500">

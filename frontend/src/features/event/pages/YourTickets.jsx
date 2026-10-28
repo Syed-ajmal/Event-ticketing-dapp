@@ -118,7 +118,7 @@ const YourTickets = () => {
       <section className="mx-auto w-full max-w-screen-xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">Your account</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Your tickets</h1>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">My tickets</h1>
           <p className="mt-2 text-slate-600">Tickets you’ve claimed for upcoming and past events.</p>
         </div>
 

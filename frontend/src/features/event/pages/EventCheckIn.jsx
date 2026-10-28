@@ -215,7 +215,7 @@ const EventCheckIn = () => {
       setSuccess(null);
       setPageError("");
     } catch {
-      setPageError("Could not read this QR code. Scan a ticket QR from Your tickets.");
+      setPageError("Could not read this QR code. Scan a ticket QR from My tickets.");
     }
   }, [eventId]);
 
@@ -239,7 +239,7 @@ const EventCheckIn = () => {
     <main className="flex min-h-screen flex-col bg-[#f5f7fb] text-slate-900">
       <Navbar />
       <section className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
-        <Link to="/events/mine" className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">← Your events</Link>
+        <Link to="/events/mine" className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">← My events</Link>
         <p className="mt-7 text-sm font-semibold uppercase tracking-wider text-indigo-600">Creator check-in</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Check in attendees</h1>
         <p className="mt-2 text-slate-600">{eventName || `Event #${eventId}`}</p>

@@ -5,20 +5,25 @@ import Footer from "../../../components/Footer";
 import { useAuth } from "../hooks/useAuth.js";
 
 const Login = () => {
-  const { loading, handleLogin } = useAuth();
+  const { handleLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submitHandler = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
-    const success = await handleLogin({ email, password });
-
-    if (success) {
-      navigate(location.state?.from || "/", { replace: true });
+    try {
+      const success = await handleLogin({ email, password });
+      if (success) {
+        navigate(location.state?.from || "/", { replace: true });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -37,12 +42,7 @@ const Login = () => {
             <p className="mt-2 text-sm leading-6 text-slate-500">Sign in to find your events and manage your tickets.</p>
           </div>
 
-          {loading ? (
-            <p className="py-4 text-center text-sm font-medium text-slate-600" role="status">
-              Logging you in…
-            </p>
-          ) : (
-            <form className="flex flex-col gap-5" onSubmit={submitHandler}>
+          <form className="flex flex-col gap-5" onSubmit={submitHandler}>
               <div className="flex flex-col gap-2">
                 <label htmlFor="email" className="text-sm font-semibold text-slate-700">
                   Email
@@ -79,12 +79,13 @@ const Login = () => {
 
               <button
                 type="submit"
-                className="mt-1 inline-flex h-11 items-center justify-center rounded-xl bg-indigo-600 px-5 font-semibold text-white shadow-lg shadow-indigo-950/15 transition hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 active:scale-[.99]"
+                disabled={isSubmitting}
+                aria-live="polite"
+                className="mt-1 inline-flex h-11 items-center justify-center rounded-xl bg-indigo-600 px-5 font-semibold text-white shadow-lg shadow-indigo-950/15 transition hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 active:scale-[.99] disabled:cursor-wait disabled:opacity-70"
               >
-                Log in
+                {isSubmitting ? "Logging in…" : "Log in"}
               </button>
-            </form>
-          )}
+          </form>
 
           <p className="mt-6 text-center text-sm text-slate-600">
             Don&apos;t have an account?{" "}
