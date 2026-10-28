@@ -8,7 +8,7 @@ import eventRouter from "./routes/event.routes.js";
 
 const app = express();
 
-app.use(express.json()); // with the help of this middleware we can access the data using req.username OR req.email
+app.use(express.json({ limit: "8mb" })); // Supports bounded base64 event poster uploads.
 app.use(morgan("dev")); // Use morgan middleware for logging HTTP requests
 app.use(cookieParser()); // It is used to read from the cookies
 

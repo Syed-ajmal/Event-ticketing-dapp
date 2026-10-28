@@ -13,6 +13,7 @@ import {
   refundEventTicket,
   uploadEventMetadata,
   withdrawEventProceeds,
+  uploadEventImage,
 } from "../services/event.api.js";
 
 const waitForTransactionReceipt = async (ethereum, transactionHash) => {
@@ -78,6 +79,9 @@ export const useEvent = () => {
     if (data?.metadataURI) setMetadataURI(data.metadataURI);
     return data;
   };
+
+  const handleUploadEventImage = async (file) =>
+    runRequest(() => uploadEventImage(file));
 
   const handleListMyEvents = useCallback(async () => {
     const data = await runRequest(getMyEvents);
@@ -416,6 +420,7 @@ export const useEvent = () => {
     metadataURI,
     loading,
     error,
+    handleUploadEventImage,
     handleUploadMetadata,
     handleListMyEvents,
     handleListMyTickets,

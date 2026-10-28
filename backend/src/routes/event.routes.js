@@ -24,6 +24,11 @@ eventRouter.get(
 );
 
 /**
+ * POST /api/event/image
+ */
+eventRouter.post("/image", authMiddleware.authUser, eventController.uploadImage);
+
+/**
  * POST /api/event/metadata
  */
 eventRouter.post(

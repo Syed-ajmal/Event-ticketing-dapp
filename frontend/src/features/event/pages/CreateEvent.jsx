@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../../../components/Navbar.jsx";
 import Footer from "../../../components/Footer.jsx";
 import { useEvent } from "../hooks/useEvent.js";
@@ -47,22 +47,35 @@ const waitForTransactionReceipt = async (ethereum, transactionHash) => {
 };
 
 const CreateEvent = () => {
-  const { handleUploadMetadata, handleCreateEvent, loading, error } =
+  const { handleUploadEventImage, handleUploadMetadata, handleCreateEvent, loading, error } =
     useEvent();
   const { walletAddress, isLinked } = useWallet();
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState(null);
   const [createdEvent, setCreatedEvent] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [submitStep, setSubmitStep] = useState("Creating event…");
   const [form, setForm] = useState({
     name: "",
     description: "",
-    image: "",
     venue: "",
     startsAt: "",
     endsAt: "",
     ticketLimit: "",
     ticketPrice: "0",
   });
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview(null);
+      return undefined;
+    }
+
+    const previewURL = URL.createObjectURL(imageFile);
+    setImagePreview(previewURL);
+    return () => URL.revokeObjectURL(previewURL);
+  }, [imageFile]);
 
   const updateField = (event) => {
     setForm((current) => ({
@@ -101,10 +114,25 @@ const CreateEvent = () => {
 
     setSubmitting(true);
     try {
+      let imageURI;
+      if (imageFile) {
+        if (!imageFile.type.startsWith("image/")) {
+          throw new Error("Choose an image file.");
+        }
+        if (imageFile.size > 5 * 1024 * 1024) {
+          throw new Error("Choose an image smaller than 5 MB.");
+        }
+        setSubmitStep("Uploading image to Pinata…");
+        const imageResult = await handleUploadEventImage(imageFile);
+        if (!imageResult?.imageURI) return;
+        imageURI = imageResult.imageURI;
+      }
+
+      setSubmitStep("Uploading event details…");
       const metadataResult = await handleUploadMetadata({
         name: form.name.trim(),
         description: form.description.trim(),
-        ...(form.image.trim() ? { image: form.image.trim() } : {}),
+        ...(imageURI ? { image: imageURI } : {}),
         ...(form.venue.trim() ? { venue: form.venue.trim() } : {}),
       });
       if (!metadataResult?.metadataURI) return;
@@ -117,6 +145,7 @@ const CreateEvent = () => {
         metadataURI: metadataResult.metadataURI,
       };
 
+      setSubmitStep("Creating event…");
       const prepared = await handleCreateEvent(details);
       if (!prepared?.transaction) {
         if (prepared?.event) setCreatedEvent(prepared.event);
@@ -230,17 +259,32 @@ const CreateEvent = () => {
                     className="rounded-lg border border-slate-300 px-3 py-2.5 font-normal"
                   />
                 </label>
-                <label className="grid gap-2 text-sm font-medium sm:col-span-2">
-                  Image URL{" "}
-                  <span className="font-normal text-slate-500">(optional)</span>
+                <div className="grid gap-2 text-sm font-medium sm:col-span-2">
+                  <label htmlFor="event-image">Event poster <span className="font-normal text-slate-500">(optional, PNG/JPG/WebP up to 5 MB)</span></label>
                   <input
-                    name="image"
-                    type="url"
-                    value={form.image}
-                    onChange={updateField}
-                    className="rounded-lg border border-slate-300 px-3 py-2.5 font-normal"
+                    id="event-image"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                    className="rounded-lg border border-slate-300 px-3 py-2.5 font-normal file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:font-semibold file:text-indigo-700"
                   />
-                </label>
+                  {imagePreview && (
+                    <div className="relative mt-1 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                      <img src={imagePreview} alt="Selected event poster preview" className="h-48 w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImageFile(null);
+                          const input = document.getElementById("event-image");
+                          if (input) input.value = "";
+                        }}
+                        className="absolute right-2 top-2 rounded-lg bg-slate-950/75 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-950"
+                      >
+                        Remove image
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <label className="grid gap-2 text-sm font-medium sm:col-span-2">
                   Venue{" "}
                   <span className="font-normal text-slate-500">(optional)</span>
@@ -305,7 +349,7 @@ const CreateEvent = () => {
                   disabled={busy || !isLinked}
                   className="mt-2 rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
                 >
-                  {busy ? "Creating event…" : "Create event"}
+                  {busy ? submitStep : "Create event"}
                 </button>
               </form>
             </>

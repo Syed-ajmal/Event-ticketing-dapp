@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:3000";
+const API_BASE_URL = import.meta.env.PROD
+  ? ""
+  : import.meta.env.VITE_API_URL || "http://127.0.0.1:3000";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -31,7 +33,10 @@ export async function refreshToken() {
         // Use axios directly so a refresh 401 won't trigger the api interceptor.
         const response = await axios.get(
           `${API_BASE_URL}/api/auth/refresh-token`,
-          { withCredentials: true },
+          {
+            withCredentials: true,
+            headers: { "Cache-Control": "no-cache" },
+          },
         );
 
         currentAccessToken = response.data.accessToken;
@@ -131,7 +136,11 @@ export async function logout() {
 export async function getMe(accessToken = currentAccessToken) {
   try {
     const response = await api.get("/api/auth/get-me", {
-      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      headers: {
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        "Cache-Control": "no-cache",
+      },
+      params: { _ts: Date.now() },
     });
 
     return response.data;

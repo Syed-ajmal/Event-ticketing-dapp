@@ -50,6 +50,21 @@ export async function uploadEventMetadata(metadata) {
   return response.data;
 }
 
+export async function uploadEventImage(file) {
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Could not read the selected image."));
+    reader.readAsDataURL(file);
+  });
+  const imageData = String(dataUrl).split(",")[1];
+  const response = await api.post("/api/event/image", {
+    mimeType: file.type,
+    imageData,
+  });
+  return response.data;
+}
+
 /**
  * Prepare an event creation transaction, or submit its hash to finish creation.
  * The backend distinguishes the two steps by whether transactionHash is set.

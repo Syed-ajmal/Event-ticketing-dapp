@@ -1,6 +1,6 @@
 import eventModel from "../models/event.model.js";
 import ticketModel from "../models/ticket.model.js";
-import { uploadEventMetadata } from "../services/pinata.js";
+import { uploadEventImage as uploadImageToPinata, uploadEventMetadata } from "../services/pinata.js";
 import {
   prepareCancelEvent,
   prepareClaimTicket,
@@ -124,6 +124,46 @@ export async function uploadMetadata(req, res) {
     return res
       .status(502)
       .json({ message: "Could not upload metadata to Pinata" });
+  }
+}
+
+export async function uploadImage(req, res) {
+  if (req.user.role !== "creator") {
+    return res.status(403).json({ message: "Creator access required" });
+  }
+
+  const { filename, mimeType, imageData } = req.body ?? {};
+  const fileTypes = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+  };
+  if (!fileTypes[mimeType]) {
+    return res.status(400).json({ message: "Choose a PNG, JPG, or WebP image" });
+  }
+  if (typeof imageData !== "string" || !imageData || imageData.length > 7_000_000) {
+    return res.status(400).json({ message: "Image is missing or exceeds the 5 MB limit" });
+  }
+
+  const buffer = Buffer.from(imageData, "base64");
+  if (
+    buffer.length === 0 ||
+    buffer.length > 5 * 1024 * 1024 ||
+    buffer.toString("base64") !== imageData
+  ) {
+    return res.status(400).json({ message: "Image is invalid or exceeds the 5 MB limit" });
+  }
+
+  const filenameForUpload = `event-poster.${fileTypes[mimeType]}`;
+  try {
+    const imageURI = await uploadImageToPinata(buffer, {
+      filename: filenameForUpload,
+      mimeType,
+    });
+    return res.status(201).json({ message: "Image uploaded", imageURI });
+  } catch (error) {
+    console.error("Pinata image upload failed:", error);
+    return res.status(502).json({ message: "Could not upload image to Pinata" });
   }
 }
 
