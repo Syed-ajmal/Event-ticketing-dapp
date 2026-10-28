@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -19,7 +20,7 @@ const Home = () => {
             <h1 className="max-w-2xl text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">Find your people.<br /><span className="text-indigo-300">Get in with confidence.</span></h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-slate-300">Discover live events, book tickets, and keep verifiable proof of entry in your wallet. Ticket ownership is secured on the blockchain.</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <a href="#how-it-works" className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-5 py-3 font-semibold text-white shadow-lg shadow-indigo-950/30 transition hover:bg-indigo-400">Explore events <span aria-hidden="true">→</span></a>
+              <Link to="/events" className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-5 py-3 font-semibold text-white shadow-lg shadow-indigo-950/30 transition hover:bg-indigo-400">Explore events <span aria-hidden="true">→</span></Link>
               <a href="#features" className="rounded-xl border border-white/20 px-5 py-3 font-semibold text-white transition hover:bg-white/10">How it works</a>
             </div>
             <div className="mt-10 flex items-center gap-3 text-sm text-slate-400">

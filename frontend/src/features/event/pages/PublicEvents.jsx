@@ -159,42 +159,51 @@ const PublicEvents = () => {
         ) : (
           <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {eventCards.map((event) => (
-              <article key={event._id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <article key={event._id} className="group relative flex min-h-[440px] flex-col overflow-hidden rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-900/15">
                 {event.metadata?.image ? (
-                  <img src={resolveIpfsUrl(event.metadata.image)} alt="" className="h-48 w-full bg-slate-100 object-cover" />
+                  <img
+                    src={resolveIpfsUrl(event.metadata.image)}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
                 ) : (
-                  <div className="grid h-40 place-items-center bg-gradient-to-br from-indigo-100 to-cyan-100 text-4xl font-bold text-indigo-500" aria-hidden="true">
-                    {(event.metadata?.name || "E").slice(0, 1).toUpperCase()}
-                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-slate-900 to-cyan-900" aria-hidden="true" />
                 )}
-                <div className="p-5">
-                  <h2 className="text-xl font-bold">{event.metadata?.name || `Event #${event.eventId}`}</h2>
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/75 to-slate-950/10" aria-hidden="true" />
+                <div className="relative z-10 flex flex-1 flex-col p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="rounded-full border border-white/25 bg-black/25 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/90 backdrop-blur-sm">Upcoming</span>
+                    <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">Event #{event.eventId}</span>
+                  </div>
+                  <div className="mt-auto pt-16">
+                  <h2 className="text-2xl font-bold leading-tight drop-shadow-sm">{event.metadata?.name || `Event #${event.eventId}`}</h2>
                   {event.metadata?.description ? (
-                    <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{event.metadata.description}</p>
+                    <p className="mt-2 line-clamp-2 text-sm leading-5 text-white/80">{event.metadata.description}</p>
                   ) : event.metadataError ? (
-                    <p className="mt-2 text-sm text-slate-500">Event metadata couldn’t be loaded.</p>
+                    <p className="mt-2 text-sm text-white/70">Event metadata couldn’t be loaded.</p>
                   ) : null}
-                  {event.metadata?.venue && <p className="mt-3 text-sm text-slate-600">{event.metadata.venue}</p>}
-                  <dl className="mt-5 grid grid-cols-2 gap-x-3 gap-y-4 border-t border-slate-100 pt-4 text-sm">
+                  {event.metadata?.venue && <p className="mt-3 text-sm font-medium text-white/90">{event.metadata.venue}</p>}
+                  <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl border border-white/20 bg-black/25 p-3 text-sm backdrop-blur-sm">
                     <div>
-                      <dt className="text-slate-500">Starts</dt>
-                      <dd className="mt-1 font-medium">{formatDate(event.startsAt)}</dd>
+                      <dt className="text-white/65">Starts</dt>
+                      <dd className="mt-1 font-semibold text-white">{formatDate(event.startsAt)}</dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500">Ends</dt>
-                      <dd className="mt-1 font-medium">{formatDate(event.endsAt)}</dd>
+                      <dt className="text-white/65">Ends</dt>
+                      <dd className="mt-1 font-semibold text-white">{formatDate(event.endsAt)}</dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500">Tickets</dt>
-                      <dd className="mt-1 font-medium">{event.ticketLimit}</dd>
+                      <dt className="text-white/65">Tickets</dt>
+                      <dd className="mt-1 font-semibold text-white">{event.ticketLimit}</dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500">Price</dt>
-                      <dd className="mt-1 font-medium">{formatEth(event.ticketPrice)}</dd>
+                      <dt className="text-white/65">Price</dt>
+                      <dd className="mt-1 font-semibold text-white">{formatEth(event.ticketPrice)}</dd>
                     </div>
                   </dl>
                   {claimedTickets[event.eventId] ? (
-                    <p className="mt-5 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700" role="status">
+                    <p className="mt-4 rounded-lg border border-emerald-200/30 bg-emerald-500/20 px-4 py-3 text-sm font-semibold text-emerald-100 backdrop-blur-sm" role="status">
                       Ticket #{claimedTickets[event.eventId].ticketId} claimed
                       <Link to="/tickets/mine" className="ml-2 underline">View your tickets</Link>
                     </p>
@@ -203,7 +212,7 @@ const PublicEvents = () => {
                       type="button"
                       onClick={() => onClaimTicket(event)}
                       disabled={authLoading || connecting || claimingEventId !== null || Boolean(user && !["attendee", "creator"].includes(user.role))}
-                      className="mt-5 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="mt-4 w-full rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {authLoading
                         ? "Checking account…"
@@ -220,6 +229,7 @@ const PublicEvents = () => {
                                   : "Claim ticket"}
                     </button>
                   )}
+                  </div>
                 </div>
               </article>
             ))}

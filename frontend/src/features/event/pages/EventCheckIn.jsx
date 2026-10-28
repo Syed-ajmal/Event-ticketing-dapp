@@ -1,28 +1,159 @@
-import { useCallback, useEffect, useState } from "react";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Link, useParams } from "react-router";
 import Footer from "../../../components/Footer.jsx";
 import Navbar from "../../../components/Navbar.jsx";
 import { useEvent } from "../hooks/useEvent.js";
 import { getEventMetadata } from "../services/event.api.js";
 
-const Reader = ({ onDecoded }) => {
-  const handleDecoded = useCallback((decodedText) => onDecoded(decodedText), [onDecoded]);
+const Reader = ({ onDecoded, disabled = false }) => {
+  const scannerRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const resultHandledRef = useRef(false);
+  const [status, setStatus] = useState("idle");
+  const [scanError, setScanError] = useState("");
+
+  const handleDecoded = useCallback(async (decodedText) => {
+    if (resultHandledRef.current) return;
+    resultHandledRef.current = true;
+    if (scannerRef.current?.isScanning) {
+      await scannerRef.current.stop().catch(() => {});
+    }
+    setStatus("idle");
+    onDecoded(decodedText);
+  }, [onDecoded]);
 
   useEffect(() => {
-    const scanner = new Html5QrcodeScanner(
-      "event-ticket-qr-reader",
-      { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1 },
-      false,
-    );
-    scanner.render(handleDecoded, () => {});
+    const scanner = new Html5Qrcode("event-ticket-qr-reader", {
+      verbose: false,
+      formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+    });
+    scannerRef.current = scanner;
 
     return () => {
-      scanner.clear().catch(() => {});
+      if (scanner.isScanning) {
+        scanner.stop().then(() => scanner.clear()).catch(() => {});
+      } else {
+        scanner.clear();
+      }
+      scannerRef.current = null;
     };
-  }, [handleDecoded]);
+  }, []);
 
-  return <div id="event-ticket-qr-reader" className="mx-auto w-full max-w-md" />;
+  const startCamera = async () => {
+    if (disabled) return;
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+
+    resultHandledRef.current = false;
+    setScanError("");
+    setStatus("starting");
+
+    try {
+      const cameras = await Html5Qrcode.getCameras();
+      if (!cameras.length) {
+        throw new Error("No camera was found. Upload a QR image or enter the ticket ID manually.");
+      }
+      const preferredCamera = cameras.find((camera) => /back|rear|environment/i.test(camera.label));
+      const camera = preferredCamera || cameras[0];
+
+      await scanner.start(
+        camera.id,
+        { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1 },
+        handleDecoded,
+        () => {},
+      );
+      setStatus("scanning");
+    } catch (err) {
+      setStatus("idle");
+      const message = err.name === "NotAllowedError" || err.name === "SecurityError"
+        ? "Camera permission is blocked. Allow camera access in your browser settings, then try again."
+        : err.name === "NotFoundError"
+          ? "No camera was found. Upload a QR image or enter the ticket ID manually."
+          : err.name === "NotReadableError"
+            ? "The camera is busy in another app. Close that app and try again."
+            : err.message || "Could not start the camera. Try uploading a QR image or enter the ticket ID manually.";
+      setScanError(message);
+    }
+  };
+
+  const stopCamera = async () => {
+    const scanner = scannerRef.current;
+    if (scanner?.isScanning) {
+      await scanner.stop().catch(() => {});
+    }
+    setStatus("idle");
+  };
+
+  const scanImageFile = async (file) => {
+    if (!file || !scannerRef.current) return;
+    setScanError("");
+    resultHandledRef.current = false;
+    setStatus("scanning");
+
+    try {
+      if (scannerRef.current.isScanning) await scannerRef.current.stop();
+      const decodedText = await scannerRef.current.scanFile(file, false);
+      setStatus("idle");
+      handleDecoded(decodedText);
+    } catch {
+      setStatus("idle");
+      setScanError("We couldn’t find a readable QR code in that image. Try a clearer image or enter the ticket ID manually.");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm text-slate-600">
+            {status === "scanning" ? "Point the camera at the attendee’s QR code." : "Use your camera or upload a QR image."}
+          </p>
+        </div>
+        <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${status === "scanning" ? "bg-emerald-100 text-emerald-800" : status === "starting" ? "bg-amber-100 text-amber-800" : "bg-slate-200 text-slate-700"}`}>
+          {status === "scanning" ? "Camera on" : status === "starting" ? "Starting camera…" : "Ready"}
+        </span>
+      </div>
+
+      <div className="relative mt-4 min-h-64 overflow-hidden rounded-xl border border-slate-200 bg-slate-950">
+        <div id="event-ticket-qr-reader" className="min-h-64 w-full" />
+        {status !== "scanning" && (
+          <div className="pointer-events-none absolute inset-0 flex min-h-64 flex-col items-center justify-center px-5 text-center text-white">
+            <span className="grid size-14 place-items-center rounded-2xl bg-white/10 text-2xl" aria-hidden="true">⌗</span>
+            <p className="mt-3 text-sm font-medium text-white/85">
+              {status === "starting" ? "Connecting to camera…" : "Camera preview will appear here"}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {scanError && <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700" role="alert">{scanError}</p>}
+
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        {status === "scanning" ? (
+          <button type="button" onClick={stopCamera} className="rounded-lg bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
+            Stop camera
+          </button>
+        ) : (
+          <button type="button" onClick={startCamera} disabled={disabled || status === "starting"} className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
+            {status === "starting" ? "Starting camera…" : "Start camera"}
+          </button>
+        )}
+        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={disabled || status === "starting" || status === "scanning"} className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">
+          Upload QR image
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(event) => scanImageFile(event.target.files?.[0])}
+        />
+      </div>
+    </div>
+  );
 };
 
 const EventCheckIn = () => {
@@ -32,7 +163,6 @@ const EventCheckIn = () => {
   const [eventName, setEventName] = useState("");
   const [pageLoading, setPageLoading] = useState(true);
   const [pageError, setPageError] = useState("");
-  const [scannerOpen, setScannerOpen] = useState(false);
   const [ticketId, setTicketId] = useState("");
   const [success, setSuccess] = useState(null);
 
@@ -84,7 +214,6 @@ const EventCheckIn = () => {
       setTicketId(String(payload.ticketId));
       setSuccess(null);
       setPageError("");
-      setScannerOpen(false);
     } catch {
       setPageError("Could not read this QR code. Scan a ticket QR from Your tickets.");
     }
@@ -127,16 +256,9 @@ const EventCheckIn = () => {
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
               <h2 className="text-lg font-bold">Scan ticket QR</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600">Allow camera access, then scan the QR shown on the attendee’s ticket.</p>
-              {scannerOpen ? (
-                <div className="mt-5">
-                  <Reader onDecoded={handleDecoded} />
-                  <button type="button" onClick={() => setScannerOpen(false)} className="mt-3 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Close camera</button>
-                </div>
-              ) : (
-                <button type="button" disabled={Boolean(event?.cancelled)} onClick={() => { setPageError(""); setScannerOpen(true); }} className="mt-5 w-full rounded-lg bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">Open camera scanner</button>
-              )}
-              <p className="mt-3 text-xs leading-5 text-slate-500">Camera access requires permission and a secure connection (HTTPS, or localhost during development). You can also enter the ticket ID below.</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">Scan the attendee’s QR code or upload an image of it.</p>
+              <Reader onDecoded={handleDecoded} disabled={Boolean(event?.cancelled)} />
+              <p className="mt-3 text-xs leading-5 text-slate-500">Camera access requires browser permission and a secure connection (HTTPS, or localhost during development). Manual ticket ID entry is also available below.</p>
             </div>
 
             <form onSubmit={submitCheckIn} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">

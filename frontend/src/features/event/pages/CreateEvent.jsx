@@ -4,6 +4,26 @@ import Footer from "../../../components/Footer.jsx";
 import { useEvent } from "../hooks/useEvent.js";
 import { useWallet } from "../../wallet/hooks/useWallet.js";
 
+const WEI_PER_ETH = 10n ** 18n;
+const UINT96_MAX = (1n << 96n) - 1n;
+
+const parseEthToWei = (value) => {
+  const input = String(value).trim();
+  const match = input.match(/^(\d+)(?:\.(\d{0,18}))?$/);
+  if (!match) {
+    throw new Error("Enter a valid ETH amount with no more than 18 decimal places.");
+  }
+
+  const wholeEth = BigInt(match[1]);
+  const fractionalWei = BigInt((match[2] || "").padEnd(18, "0"));
+  const wei = wholeEth * WEI_PER_ETH + fractionalWei;
+  if (wei > UINT96_MAX) {
+    throw new Error("Ticket price exceeds the maximum supported amount.");
+  }
+
+  return wei.toString();
+};
+
 const waitForTransactionReceipt = async (ethereum, transactionHash) => {
   for (let attempt = 0; attempt < 120; attempt += 1) {
     const receipt = await ethereum.request({
@@ -63,6 +83,14 @@ const CreateEvent = () => {
       return;
     }
 
+    let ticketPriceWei;
+    try {
+      ticketPriceWei = parseEthToWei(form.ticketPrice);
+    } catch (err) {
+      setPageError(err.message);
+      return;
+    }
+
     const ethereum = window.ethereum;
     if (!ethereum?.request) {
       setPageError(
@@ -85,7 +113,7 @@ const CreateEvent = () => {
         startsAt: String(Math.floor(new Date(form.startsAt).getTime() / 1000)),
         endsAt: String(Math.floor(new Date(form.endsAt).getTime() / 1000)),
         ticketLimit: form.ticketLimit,
-        ticketPrice: form.ticketPrice,
+        ticketPrice: ticketPriceWei,
         metadataURI: metadataResult.metadataURI,
       };
 
@@ -259,12 +287,13 @@ const CreateEvent = () => {
                   />
                 </label>
                 <label className="grid gap-2 text-sm font-medium">
-                  Ticket price (smallest token units)
+                  Ticket price (ETH)
                   <input
                     name="ticketPrice"
                     type="number"
                     min="0"
-                    step="1"
+                    step="any"
+                    inputMode="decimal"
                     value={form.ticketPrice}
                     onChange={updateField}
                     required
