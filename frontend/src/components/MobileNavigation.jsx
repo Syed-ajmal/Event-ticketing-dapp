@@ -50,11 +50,11 @@ const MobileNavigation = ({
           top: 65,
           right: 0,
           zIndex: 9999,
-          width: "min(22rem, 85vw)",
+          width: "min(20rem, 78vw)",
           height: "max-content",
           maxHeight: "calc(100vh - 65px)",
         }}
-        className="overflow-y-auto border-l border-slate-200 bg-white px-4 py-3 shadow-2xl md:hidden"
+        className="overflow-y-auto rounded-l-2xl border-l border-slate-200 bg-white px-4 py-3 shadow-2xl md:hidden"
       >
         <nav className="flex flex-col gap-1">
           {user ? (
@@ -127,7 +127,7 @@ const MobileNavigation = ({
                   onClose();
                   handleLogout();
                 }}
-                className="rounded-lg px-3 py-3 mb-5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-lg px-3 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Sign out
               </button>
