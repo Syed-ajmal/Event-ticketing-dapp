@@ -51,6 +51,15 @@ const MobileNavigation = ({
         className="overflow-y-auto border-l border-slate-200 bg-white px-5 py-6 shadow-2xl md:hidden"
       >
         <nav className="flex flex-col gap-1">
+          <Link to="/events" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            Events
+          </Link>
+          <a href="/#how-it-works" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            How it works
+          </a>
+          <a href="/#features" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            Features
+          </a>
           {user ? (
             <>
               <div className="my-3 border-t border-slate-100" />

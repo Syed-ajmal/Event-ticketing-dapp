@@ -144,7 +144,7 @@ const Navbar = () => {
             </span>
           </Link>
 
-          <div className="flex items-center gap-2 sm:gap-6">
+          <div className="hidden items-center gap-2 md:flex md:gap-6">
             <Link to="/events" onClick={closeMobileMenu} className="whitespace-nowrap text-xs font-medium text-slate-600 transition hover:text-indigo-600 sm:text-sm">
               Events
             </Link>
@@ -199,18 +199,38 @@ const Navbar = () => {
             )}
           </button>
         ) : (
+          <>
           <Link
             to="/login"
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            className="hidden shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 md:inline-flex"
           >
             Log in
           </Link>
+          <button
+            type="button"
+            className="grid size-10 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 md:hidden"
+            aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            {mobileMenuOpen ? (
+              <svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
+                <path d="m6 6 12 12M18 6 6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
+                <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
+          </>
         )}
 
       </nav>
       </header>
       <MobileNavigation
-        isOpen={Boolean(user && mobileMenuOpen)}
+        isOpen={mobileMenuOpen}
         onClose={closeMobileMenu}
         user={user}
         name={name}
