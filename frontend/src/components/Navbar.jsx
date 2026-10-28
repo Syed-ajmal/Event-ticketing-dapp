@@ -124,34 +124,34 @@ const Navbar = () => {
       <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
       <nav
         aria-label="Main navigation"
-        className="relative mx-auto flex w-full max-w-screen-2xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8"
+        className="relative mx-auto flex w-full max-w-screen-2xl items-center justify-between gap-2 px-2.5 py-3 min-[400px]:px-3 sm:px-6 lg:px-8"
       >
-        <div className="flex min-w-0 items-center gap-5 sm:gap-8">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-8">
           <Link
             to="/"
-            className="flex shrink-0 items-center gap-3"
+            className="flex shrink-0 items-center gap-1.5 sm:gap-3"
             aria-label="TicketApp home"
             onClick={closeMobileMenu}
           >
-            <span className="grid size-10 place-items-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-200" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" className="size-6">
+            <span className="grid size-8 place-items-center rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-200 sm:size-10 sm:rounded-xl" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" className="size-5 sm:size-6">
                 <path d="M7 3.75h7l4 4V20a.25.25 0 0 1-.25.25h-10.5A.25.25 0 0 1 7 20V3.75Z" stroke="currentColor" strokeWidth="1.7" />
                 <path d="M14 4v4h4M9.5 13l1.7 1.7 3.5-3.7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </span>
-            <span className="text-xl font-bold tracking-tight text-slate-900 max-[380px]:hidden">
+            <span className="text-[15px] font-bold tracking-tight text-slate-900 min-[400px]:text-base sm:text-xl max-[359px]:hidden">
               TicketApp<span className="text-indigo-600">.</span>
             </span>
           </Link>
 
-          <div className="hidden items-center gap-2 md:flex md:gap-6">
-            <Link to="/events" onClick={closeMobileMenu} className="whitespace-nowrap text-xs font-medium text-slate-600 transition hover:text-indigo-600 sm:text-sm">
+          <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-6">
+            <Link to="/events" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm">
               Events
             </Link>
-            <a href="/#how-it-works" onClick={closeMobileMenu} className="whitespace-nowrap text-xs font-medium text-slate-600 transition hover:text-indigo-600 sm:text-sm">
+            <a href="/#how-it-works" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm">
               How it works
             </a>
-            <a href="/#features" onClick={closeMobileMenu} className="whitespace-nowrap text-xs font-medium text-slate-600 transition hover:text-indigo-600 sm:text-sm">
+            <a href="/#features" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm max-[399px]:hidden">
               Features
             </a>
           </div>
@@ -182,7 +182,7 @@ const Navbar = () => {
         {user ? (
           <button
             type="button"
-            className="grid size-10 place-items-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 md:hidden"
+          className="grid size-9 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 md:hidden"
             aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-navigation"
@@ -199,16 +199,16 @@ const Navbar = () => {
             )}
           </button>
         ) : (
-          <>
+          <div className="flex shrink-0 items-center gap-1.5 min-[400px]:gap-2 sm:gap-3">
           <Link
             to="/login"
-            className="hidden shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 md:inline-flex"
+            className="shrink-0 rounded-lg bg-indigo-600 px-2 py-1.5 text-[10px] font-semibold text-white transition hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 min-[400px]:px-2.5 min-[400px]:text-xs sm:px-4 sm:py-2 sm:text-sm"
           >
             Log in
           </Link>
           <button
             type="button"
-            className="grid size-10 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 md:hidden"
+            className="grid size-9 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 md:hidden"
             aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-navigation"
@@ -224,7 +224,7 @@ const Navbar = () => {
               </svg>
             )}
           </button>
-          </>
+          </div>
         )}
 
       </nav>

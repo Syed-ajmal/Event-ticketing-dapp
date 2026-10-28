@@ -19,6 +19,12 @@ const MobileNavigation = ({
   const shortAddress = walletAddress
     ? `${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}`
     : null;
+  const injectedWalletAvailable =
+    typeof window !== "undefined" && Boolean(window.ethereum?.request);
+  const metaMaskDappUrl =
+    typeof window !== "undefined"
+      ? `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}${window.location.search}${window.location.hash}`
+      : "https://metamask.app.link";
 
   return createPortal(
     <>
@@ -51,15 +57,6 @@ const MobileNavigation = ({
         className="overflow-y-auto border-l border-slate-200 bg-white px-5 py-6 shadow-2xl md:hidden"
       >
         <nav className="flex flex-col gap-1">
-          <Link to="/events" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-            Events
-          </Link>
-          <a href="/#how-it-works" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-            How it works
-          </a>
-          <a href="/#features" onClick={onClose} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-            Features
-          </a>
           {user ? (
             <>
               <div className="my-3 border-t border-slate-100" />
@@ -73,7 +70,7 @@ const MobileNavigation = ({
                     <span className="size-2 rounded-full bg-emerald-500" aria-hidden="true" />
                     Wallet linked <span className="font-mono">{shortAddress}</span>
                   </span>
-                ) : (
+                ) : injectedWalletAvailable ? (
                   <button
                     type="button"
                     onClick={() => connectWallet().catch(() => {})}
@@ -82,8 +79,20 @@ const MobileNavigation = ({
                   >
                     {connecting ? "Connecting…" : isConnected ? "Link wallet" : "Connect wallet"}
                   </button>
+                ) : (
+                  <div>
+                    <a
+                      href={metaMaskDappUrl}
+                      className="flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                    >
+                      Connect wallet
+                    </a>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">
+                      This opens the page in MetaMask. Approve the connection there to continue.
+                    </p>
+                  </div>
                 )}
-                {walletError && <p className="mt-2 text-xs text-rose-600" role="alert">{walletError}</p>}
+                {injectedWalletAvailable && walletError && <p className="mt-2 text-xs text-rose-600" role="alert">{walletError}</p>}
               </div>
               {user.role === "creator" && (
                 <>
