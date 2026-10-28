@@ -218,13 +218,13 @@ const PublicEvents = () => {
                       {authLoading
                         ? "Checking account…"
                         : !user
-                          ? "Log in to claim"
+                          ? "Log in to buy"
                           : !["attendee", "creator"].includes(user.role)
                             ? "Attendees and creators only"
                             : connecting
-                              ? "Linking wallet…"
+                              ? "Connecting wallet…"
                               : !isLinked
-                                ? "Link wallet to claim"
+                                ? "Connect wallet to buy"
                                 : claimingEventId === event.eventId
                                   ? "Buying ticket…"
                                   : "Buy ticket"}
