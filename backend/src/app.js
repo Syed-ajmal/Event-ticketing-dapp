@@ -11,9 +11,14 @@ const app = express();
 app.use(express.json()); // with the help of this middleware we can access the data using req.username OR req.email
 app.use(morgan("dev")); // Use morgan middleware for logging HTTP requests
 app.use(cookieParser()); // It is used to read from the cookies
+
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    origin: [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      process.env.FRONTEND_URL,
+    ].filter(Boolean),
     credentials: true,
   }),
 );
