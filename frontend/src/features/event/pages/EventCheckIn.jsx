@@ -253,7 +253,22 @@ const EventCheckIn = () => {
         <p className="mt-2 text-slate-600">{eventName || `Event #${eventId}`}</p>
 
         {pageLoading ? (
-          <p className="py-16 text-center text-slate-600" role="status">Loading event…</p>
+          <div
+            className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <div className="flex items-center gap-3">
+              <span className="size-5 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" aria-hidden="true" />
+              <p className="font-semibold text-slate-800">Loading event details…</p>
+            </div>
+            <div className="mt-6 animate-pulse space-y-4" aria-hidden="true">
+              <div className="h-5 w-40 rounded bg-slate-200" />
+              <div className="h-4 w-3/4 rounded bg-slate-100" />
+              <div className="h-64 rounded-xl bg-slate-100" />
+            </div>
+          </div>
         ) : pageError && !event ? (
           <p className="mt-8 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700" role="alert">{pageError}</p>
         ) : (
