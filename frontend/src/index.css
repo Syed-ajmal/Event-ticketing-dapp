@@ -1,1 +1,26 @@
 @import "tailwindcss";
+
+.ticket-card-scene {
+  -webkit-perspective: 1200px;
+  perspective: 1200px;
+}
+
+.ticket-card-inner {
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+}
+
+.ticket-card-inner.is-flipped {
+  -webkit-transform: rotateY(180deg);
+  transform: rotateY(180deg);
+}
+
+.ticket-card-face {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.ticket-card-back {
+  -webkit-transform: rotateY(180deg);
+  transform: rotateY(180deg);
+}

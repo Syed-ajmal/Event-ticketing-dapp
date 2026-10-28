@@ -151,9 +151,9 @@ const YourTickets = () => {
               });
 
               return (
-                <article key={ticket._id} className="[perspective:1200px]">
-                  <div className={`relative min-h-[460px] transition-transform duration-700 [transform-style:preserve-3d] ${shownQrTicketId === String(ticket.ticketId) ? "[transform:rotateY(180deg)]" : ""}`}>
-                  <div className="group relative flex min-h-[460px] flex-col overflow-hidden rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-900/15 [backface-visibility:hidden]">
+                <article key={ticket._id} className="ticket-card-scene">
+                  <div className={`ticket-card-inner relative min-h-[460px] transition-transform duration-700 ${shownQrTicketId === String(ticket.ticketId) ? "is-flipped" : ""}`}>
+                  <div className="ticket-card-face group relative flex min-h-[460px] flex-col overflow-hidden rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-900/15">
                   {ticket.metadata?.image ? (
                     <img
                       src={resolveIpfsUrl(ticket.metadata.image)}
@@ -240,7 +240,7 @@ const YourTickets = () => {
                   {shownQrTicketId === String(ticket.ticketId) && !ticket.refunded && !event?.cancelled && (
                     <div
                       id={`ticket-qr-${ticket.ticketId}`}
-                      className="absolute inset-0 flex min-h-[460px] flex-col items-center justify-center rounded-2xl bg-white p-6 text-center text-slate-900 shadow-lg [backface-visibility:hidden] [transform:rotateY(180deg)]"
+                      className="ticket-card-face ticket-card-back absolute inset-0 flex min-h-[460px] flex-col items-center justify-center rounded-2xl bg-white p-6 text-center text-slate-900 shadow-lg"
                     >
                       <p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">Entry ticket</p>
                       <h2 className="mt-2 text-xl font-bold">{ticket.metadata?.name || `Event #${ticket.eventId}`}</h2>
