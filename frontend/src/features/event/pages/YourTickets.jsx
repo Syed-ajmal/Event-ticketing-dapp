@@ -5,6 +5,7 @@ import Footer from "../../../components/Footer.jsx";
 import Navbar from "../../../components/Navbar.jsx";
 import { useEvent } from "../hooks/useEvent.js";
 import { getEventMetadata, resolveIpfsUrl } from "../services/event.api.js";
+import EventCardSkeletonGrid from "../components/EventCardSkeletonGrid.jsx";
 
 const formatDate = (value) => {
   if (!value) return "Date unavailable";
@@ -129,7 +130,7 @@ const YourTickets = () => {
         )}
 
         {pageLoading ? (
-          <p className="py-20 text-center text-slate-600" role="status">Loading your tickets…</p>
+          <EventCardSkeletonGrid label="Loading your tickets" />
         ) : tickets.length === 0 && !error ? (
           <div className="mt-10 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
             <h2 className="text-xl font-semibold">You don’t have any tickets yet</h2>

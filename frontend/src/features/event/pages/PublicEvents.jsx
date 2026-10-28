@@ -6,6 +6,7 @@ import { useEvent } from "../hooks/useEvent.js";
 import { getEventMetadata, resolveIpfsUrl } from "../services/event.api.js";
 import { useAuth } from "../../auth/hooks/useAuth.js";
 import { useWallet } from "../../wallet/hooks/useWallet.js";
+import EventCardSkeletonGrid from "../components/EventCardSkeletonGrid.jsx";
 
 const formatDate = (timestamp) =>
   new Date(Number(timestamp) * 1000).toLocaleString(undefined, {
@@ -150,7 +151,7 @@ const PublicEvents = () => {
         )}
 
         {pageLoading ? (
-          <p className="py-20 text-center text-slate-600" role="status">Loading events…</p>
+          <EventCardSkeletonGrid cardHeight="min-h-[440px]" label="Loading upcoming events" />
         ) : eventCards.length === 0 && !error ? (
           <div className="mt-10 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
             <h2 className="text-xl font-semibold">No upcoming events yet</h2>
