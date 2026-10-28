@@ -50,8 +50,19 @@ export const useAuth = () => {
         return { success: false, message: "Unable to create your account." };
       }
 
-      setUser(data.user);
       setAccessToken(data.accessToken);
+
+      // Registration returns only username and email. Load the canonical
+      // profile so role-based UI (such as event ticket claims) is correct
+      // immediately without requiring a page refresh.
+      const profile = await getMe(data.accessToken);
+      setUser(
+        profile?.user ?? {
+          ...data.user,
+          role: "attendee",
+          walletAddress: null,
+        },
+      );
       return { success: true };
     } catch (err) {
       return {
