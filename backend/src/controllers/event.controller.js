@@ -91,7 +91,7 @@ export async function listMyTickets(req, res) {
   try {
     const tickets = await ticketModel
       .find({ attendee: req.user._id })
-      .select("ticketId eventId event attendeeWalletAddress transactionHash createdAt")
+      .select("ticketId eventId event attendeeWalletAddress transactionHash createdAt refunded refundedAt refundAmount refundTransactionHash")
       .populate({
         path: "event",
         select: "eventId startsAt endsAt ticketPrice metadataURI cancelled",

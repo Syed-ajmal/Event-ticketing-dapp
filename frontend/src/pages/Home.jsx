@@ -1,9 +1,17 @@
-import React from "react";
-import { Link } from "react-router";
+import React, { useEffect } from "react";
+import { Link, useLocation } from "react-router";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 const Home = () => {
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (!hash) return;
+    const section = document.getElementById(hash.slice(1));
+    section?.scrollIntoView({ behavior: "smooth" });
+  }, [hash]);
+
   return (
     <main className="min-h-screen bg-[#f5f7fb] text-slate-900">
       <Navbar />

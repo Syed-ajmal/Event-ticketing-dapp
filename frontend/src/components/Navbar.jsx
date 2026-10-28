@@ -148,12 +148,12 @@ const Navbar = () => {
             <Link to="/events" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm">
               Events
             </Link>
-            <a href="/#how-it-works" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm">
+            <Link to="/#how-it-works" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm">
               How it works
-            </a>
-            <a href="/#features" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm max-[520px]:hidden">
+            </Link>
+            <Link to="/#features" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm max-[520px]:hidden">
               Features
-            </a>
+            </Link>
           </div>
         </div>
 
