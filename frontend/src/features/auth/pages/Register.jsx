@@ -13,15 +13,26 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [registerError, setRegisterError] = useState("");
 
   const submitHandler = async (e) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      setPasswordError("Passwords do not match.");
+      return;
+    }
+
+    setPasswordError("");
+    setRegisterError("");
     setIsSubmitting(true);
 
     try {
-      const success = await handleRegister({ username, email, password });
-      if (success) {
+      const result = await handleRegister({ username, email, password });
+      if (result?.success) {
         navigate("/");
+      } else {
+        setRegisterError(result?.message || "Unable to register. Please try again.");
       }
     } finally {
       setIsSubmitting(false);
@@ -60,10 +71,15 @@ const Register = () => {
                   name="username"
                   autoComplete="username"
                   required
+                  aria-invalid={Boolean(registerError)}
+                  aria-describedby={registerError ? "register-error" : undefined}
                   placeholder="Choose a username"
                   className={inputClassName}
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    setRegisterError("");
+                  }}
                 />
               </div>
 
@@ -80,10 +96,15 @@ const Register = () => {
                   name="email"
                   autoComplete="email"
                   required
+                  aria-invalid={Boolean(registerError)}
+                  aria-describedby={registerError ? "register-error" : undefined}
                   placeholder="you@example.com"
                   className={inputClassName}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setRegisterError("");
+                  }}
                 />
               </div>
 
@@ -103,7 +124,10 @@ const Register = () => {
                   placeholder="Create a password"
                   className={inputClassName}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setPasswordError("");
+                  }}
                 />
               </div>
 
@@ -120,11 +144,26 @@ const Register = () => {
                   name="confirmPassword"
                   autoComplete="new-password"
                   required
+                  aria-invalid={Boolean(passwordError)}
+                  aria-describedby={passwordError ? "confirm-password-error" : undefined}
                   placeholder="Enter your password again"
                   className={inputClassName}
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setPasswordError("");
+                  }}
                 />
+                {passwordError && (
+                  <p id="confirm-password-error" className="text-center text-sm font-medium text-rose-600" role="alert">
+                    {passwordError}
+                  </p>
+                )}
+                {registerError && (
+                  <p id="register-error" className="text-center text-sm font-medium text-rose-600" role="alert">
+                    {registerError}
+                  </p>
+                )}
               </div>
 
               <button

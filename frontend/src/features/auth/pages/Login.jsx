@@ -12,15 +12,19 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
   const submitHandler = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setLoginError("");
 
     try {
-      const success = await handleLogin({ email, password });
-      if (success) {
+      const result = await handleLogin({ email, password });
+      if (result?.success) {
         navigate(location.state?.from || "/", { replace: true });
+      } else {
+        setLoginError(result?.message || "Invalid username or password.");
       }
     } finally {
       setIsSubmitting(false);
@@ -56,7 +60,10 @@ const Login = () => {
                   placeholder="you@example.com"
                   className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setLoginError("");
+                  }}
                 />
               </div>
 
@@ -70,11 +77,21 @@ const Login = () => {
                   name="password"
                   autoComplete="current-password"
                   required
+                  aria-invalid={Boolean(loginError)}
+                  aria-describedby={loginError ? "login-error" : undefined}
                   placeholder="Enter your password"
                   className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setLoginError("");
+                  }}
                 />
+                {loginError && (
+                  <p id="login-error" className="text-center text-sm font-medium text-rose-600" role="alert">
+                    {loginError}
+                  </p>
+                )}
               </div>
 
               <button

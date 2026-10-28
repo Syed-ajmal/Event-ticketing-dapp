@@ -71,7 +71,9 @@ api.interceptors.response.use(
       err.response?.status !== 401 ||
       !originalRequest ||
       originalRequest._retried ||
-      originalRequest.url?.includes("/api/auth/refresh-token")
+      originalRequest.url?.includes("/api/auth/refresh-token") ||
+      originalRequest.url?.includes("/api/auth/login") ||
+      originalRequest.url?.includes("/api/auth/register")
     ) {
       return Promise.reject(err);
     }
@@ -88,36 +90,28 @@ api.interceptors.response.use(
 );
 
 export async function register({ username, email, password }) {
-  try {
-    const response = await api.post("/api/auth/register", {
-      username,
-      email,
-      password,
-    });
+  const response = await api.post("/api/auth/register", {
+    username,
+    email,
+    password,
+  });
 
-    currentAccessToken = response.data.accessToken;
-    onAccessTokenChange(response.data.accessToken);
+  currentAccessToken = response.data.accessToken;
+  onAccessTokenChange(response.data.accessToken);
 
-    return response.data;
-  } catch (err) {
-    console.log(err);
-  }
+  return response.data;
 }
 
 export async function login({ email, password }) {
-  try {
-    const response = await api.post("/api/auth/login", {
-      email,
-      password,
-    });
+  const response = await api.post("/api/auth/login", {
+    email,
+    password,
+  });
 
-    currentAccessToken = response.data.accessToken;
-    onAccessTokenChange(response.data.accessToken);
+  currentAccessToken = response.data.accessToken;
+  onAccessTokenChange(response.data.accessToken);
 
-    return response.data;
-  } catch (err) {
-    console.log(err);
-  }
+  return response.data;
 }
 
 export async function logout() {

@@ -22,15 +22,19 @@ export const useAuth = () => {
       const data = await login({ email, password });
 
       if (!data?.user || !data?.accessToken) {
-        return false;
+        return { success: false, message: "Invalid email or password." };
       }
 
       const profile = await getMe(data.accessToken);
       setUser(profile?.user ?? data.user);
       setAccessToken(data.accessToken);
-      return true;
+      return { success: true };
     } catch (err) {
-      return false;
+      return {
+        success: false,
+        message:
+          err.response?.data?.message || "Unable to log in. Please try again.",
+      };
     } finally {
       setLoading(false);
     }
@@ -43,14 +47,20 @@ export const useAuth = () => {
       const data = await register({ username, email, password });
 
       if (!data?.user || !data?.accessToken) {
-        return false;
+        return { success: false, message: "Unable to create your account." };
       }
 
       setUser(data.user);
       setAccessToken(data.accessToken);
-      return true;
+      return { success: true };
     } catch (err) {
-      return false;
+      return {
+        success: false,
+        message:
+          err.response?.status === 409
+            ? "Username or email already taken"
+            : err.response?.data?.message || "Unable to register. Please try again.",
+      };
     } finally {
       setLoading(false);
     }
