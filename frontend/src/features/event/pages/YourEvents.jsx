@@ -44,7 +44,6 @@ const isCheckInOpen = (event, now) =>
 
 const YourEvents = () => {
   const {
-    events,
     error,
     handleListMyEvents,
     handleCancelEvent,
@@ -53,6 +52,8 @@ const YourEvents = () => {
   const [eventCards, setEventCards] = useState([]);
   const [metadataLoading, setMetadataLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [cancellingEventId, setCancellingEventId] = useState(null);
   const [withdrawingEventId, setWithdrawingEventId] = useState(null);
   const [currentTime, setCurrentTime] = useState(() => Math.floor(Date.now() / 1000));
@@ -67,19 +68,24 @@ const YourEvents = () => {
 
   useEffect(() => {
     let active = true;
+    setMetadataLoading(true);
+    setHasLoaded(false);
 
     const loadEvents = async () => {
-      const records = await handleListMyEvents();
+      const result = await handleListMyEvents(page);
       if (!active) return;
 
-      if (!records) {
+      if (!result?.events) {
+        setEventCards([]);
+        setTotalPages(1);
         setMetadataLoading(false);
         setHasLoaded(true);
         return;
       }
+      setTotalPages(Math.max(1, result.totalPages || 1));
 
       const cards = await Promise.all(
-        records.map(async (event) => {
+        result.events.map(async (event) => {
           try {
             const metadata = await getEventMetadata(event.metadataURI);
             return { ...event, metadata, metadataError: false };
@@ -100,7 +106,7 @@ const YourEvents = () => {
     return () => {
       active = false;
     };
-  }, [handleListMyEvents]);
+  }, [handleListMyEvents, page]);
 
   const isLoading = !hasLoaded || metadataLoading;
 
@@ -171,7 +177,7 @@ const YourEvents = () => {
 
         {isLoading ? (
           <EventCardSkeletonGrid label="Loading your events" />
-        ) : hasLoaded && !error && events.length === 0 ? (
+        ) : hasLoaded && !error && eventCards.length === 0 ? (
           <div className="mt-10 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
             <h2 className="text-xl font-semibold">You haven’t created any events yet</h2>
             <p className="mt-2 text-slate-600">Your published events will appear here.</p>
@@ -276,6 +282,28 @@ const YourEvents = () => {
               );
             })}
           </div>
+        )}
+
+        {!isLoading && totalPages > 1 && (
+          <nav aria-label="My event pages" className="mt-8 flex items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={page === 1}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-slate-600">Page {page} of {totalPages}</span>
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              disabled={page >= totalPages}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </nav>
         )}
       </section>
       <Footer />

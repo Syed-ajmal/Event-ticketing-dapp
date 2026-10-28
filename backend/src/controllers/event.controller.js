@@ -21,6 +21,22 @@ const UINT32_MAX = (1n << 32n) - 1n;
 const UINT96_MAX = (1n << 96n) - 1n;
 const UINT256_MAX = (1n << 256n) - 1n;
 const PUBLIC_EVENT_PAGE_SIZE = 10;
+const MY_EVENTS_PAGE_SIZE = 6;
+const MY_TICKETS_PAGE_SIZE = 6;
+
+function parsePageQuery(req, res) {
+  const rawPage = req.query.page ?? "1";
+  if (typeof rawPage !== "string" || !/^\d+$/.test(rawPage)) {
+    res.status(400).json({ message: "page must be a positive integer" });
+    return null;
+  }
+  const page = Number(rawPage);
+  if (!Number.isSafeInteger(page) || page < 1) {
+    res.status(400).json({ message: "page must be a positive integer" });
+    return null;
+  }
+  return page;
+}
 
 export async function listPublic(req, res) {
   const rawPage = req.query.page ?? "1";
@@ -70,13 +86,29 @@ export async function listMine(req, res) {
     return res.status(403).json({ message: "Creator access required" });
   }
 
-  try {
-    const events = await eventModel
-      .find({ creator: req.user._id })
-      .sort({ createdAt: -1 })
-      .lean();
+  const page = parsePageQuery(req, res);
+  if (page === null) return;
 
-    return res.status(200).json({ events });
+  try {
+    const filter = { creator: req.user._id };
+    const limit = MY_EVENTS_PAGE_SIZE;
+    const [events, total] = await Promise.all([
+      eventModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      eventModel.countDocuments(filter),
+    ]);
+
+    return res.status(200).json({
+      events,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     console.error("Creator events fetch failed:", error);
     return res.status(500).json({ message: "Could not load your events" });
@@ -88,18 +120,34 @@ export async function listMyTickets(req, res) {
     return res.status(403).json({ message: "Attendee or creator access required" });
   }
 
-  try {
-    const tickets = await ticketModel
-      .find({ attendee: req.user._id })
-      .select("ticketId eventId event attendeeWalletAddress transactionHash createdAt refunded refundedAt refundAmount refundTransactionHash")
-      .populate({
-        path: "event",
-        select: "eventId startsAt endsAt ticketPrice metadataURI cancelled",
-      })
-      .sort({ createdAt: -1 })
-      .lean();
+  const page = parsePageQuery(req, res);
+  if (page === null) return;
 
-    return res.status(200).json({ tickets });
+  try {
+    const filter = { attendee: req.user._id };
+    const limit = MY_TICKETS_PAGE_SIZE;
+    const [tickets, total] = await Promise.all([
+      ticketModel
+        .find(filter)
+        .select("ticketId eventId event attendeeWalletAddress transactionHash createdAt refunded refundedAt refundAmount refundTransactionHash")
+        .populate({
+          path: "event",
+          select: "eventId startsAt endsAt ticketPrice metadataURI cancelled",
+        })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      ticketModel.countDocuments(filter),
+    ]);
+
+    return res.status(200).json({
+      tickets,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     console.error("User tickets fetch failed:", error);
     return res.status(500).json({ message: "Could not load your tickets" });

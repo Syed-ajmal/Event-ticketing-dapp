@@ -172,12 +172,20 @@ const EventCheckIn = () => {
     const loadEvent = async () => {
       setPageLoading(true);
       setPageError("");
-      const events = await handleListMyEvents();
-      if (!active) return;
+      let page = 1;
+      let selectedEvent = null;
+      let totalPages = 1;
+      do {
+        const result = await handleListMyEvents(page);
+        if (!active) return;
+        if (!result?.events) break;
+        totalPages = result.totalPages || 1;
+        selectedEvent = result.events.find(
+          (item) => String(item.eventId) === String(eventId),
+        ) ?? null;
+        page += 1;
+      } while (!selectedEvent && page <= totalPages);
 
-      const selectedEvent = events?.find(
-        (item) => String(item.eventId) === String(eventId),
-      );
       if (!selectedEvent) {
         setPageError("That event was not found in your creator events.");
         setPageLoading(false);

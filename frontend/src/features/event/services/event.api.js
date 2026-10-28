@@ -18,13 +18,13 @@ export function resolveIpfsUrl(uri) {
   return `${IPFS_GATEWAY}/${contentPath.replace(/^\/ipfs\//, "")}`;
 }
 
-export async function getMyEvents() {
-  const response = await api.get("/api/event/mine");
+export async function getMyEvents(page = 1) {
+  const response = await api.get("/api/event/mine", { params: { page } });
   return response.data;
 }
 
-export async function getMyTickets() {
-  const response = await api.get("/api/event/my-tickets");
+export async function getMyTickets(page = 1) {
+  const response = await api.get("/api/event/my-tickets", { params: { page } });
   return response.data;
 }
 

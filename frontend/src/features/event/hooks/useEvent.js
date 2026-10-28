@@ -83,15 +83,15 @@ export const useEvent = () => {
   const handleUploadEventImage = async (file) =>
     runRequest(() => uploadEventImage(file));
 
-  const handleListMyEvents = useCallback(async () => {
-    const data = await runRequest(getMyEvents);
+  const handleListMyEvents = useCallback(async (page = 1) => {
+    const data = await runRequest(() => getMyEvents(page));
     if (data?.events) setEvents(data.events);
-    return data?.events ?? null;
+    return data;
   }, [runRequest, setEvents]);
 
-  const handleListMyTickets = useCallback(async () => {
-    const data = await runRequest(getMyTickets);
-    return data?.tickets ?? null;
+  const handleListMyTickets = useCallback(async (page = 1) => {
+    const data = await runRequest(() => getMyTickets(page));
+    return data;
   }, [runRequest]);
 
   const handleListPublicEvents = useCallback(
