@@ -148,8 +148,8 @@ const Navbar = () => {
             <Link to="/events" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm">
               Events
             </Link>
-            <Link to="/#how-it-works" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm">
-              How it works
+            <Link to="/guide" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm">
+              Guide
             </Link>
             <Link to="/#features" onClick={closeMobileMenu} className="whitespace-nowrap text-[10px] font-medium text-slate-600 transition hover:text-indigo-600 min-[400px]:text-[11px] sm:text-sm max-[520px]:hidden">
               Features

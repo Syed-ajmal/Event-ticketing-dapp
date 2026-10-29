@@ -10,6 +10,7 @@ import YourEvents from "./features/event/pages/YourEvents.jsx";
 import PublicEvents from "./features/event/pages/PublicEvents.jsx";
 import YourTickets from "./features/event/pages/YourTickets.jsx";
 import EventCheckIn from "./features/event/pages/EventCheckIn.jsx";
+import Guide from "./pages/Guide.jsx";
 
 export const router = createBrowserRouter([
   {
@@ -23,6 +24,10 @@ export const router = createBrowserRouter([
   {
     path: "/events",
     element: <PublicEvents />,
+  },
+  {
+    path: "/guide",
+    element: <Guide />,
   },
   {
     path: "/tickets/mine",
