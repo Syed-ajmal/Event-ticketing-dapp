@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import Footer from "../components/Footer.jsx";
 import Navbar from "../components/Navbar.jsx";
@@ -35,7 +36,28 @@ const ExternalLink = ({ href, children }) => (
   </a>
 );
 
-const Guide = () => (
+const guideSteps = [
+  { id: "account", number: "01", label: "Account" },
+  { id: "wallet", number: "02", label: "MetaMask" },
+  { id: "sepolia", number: "03", label: "Sepolia ETH" },
+  { id: "connect", number: "04", label: "Connect wallet" },
+  { id: "tickets", number: "05", label: "Claim a ticket" },
+  { id: "creator", number: "06", label: "Become a creator" },
+  { id: "manage", number: "07", label: "Manage and check in" },
+];
+
+const Guide = () => {
+  const [activeStep, setActiveStep] = useState(guideSteps[0].id);
+  const activeStepIndex = guideSteps.findIndex((step) => step.id === activeStep);
+
+  const goToStep = (id) => {
+    setActiveStep(id);
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  return (
   <main className="flex min-h-screen flex-col bg-[#f5f7fb] text-slate-900">
     <Navbar />
 
@@ -61,29 +83,66 @@ const Guide = () => (
     </section>
 
     <section className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-      <nav aria-label="Guide sections" className="mb-10 grid gap-3 sm:grid-cols-3">
-        <a href="#getting-started" className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md sm:p-5">
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">Steps 01–04</span>
-          <span className="mt-1 block text-lg font-bold text-slate-900">Get started</span>
-          <span className="mt-1 block text-sm leading-5 text-slate-600">Account, MetaMask, test ETH, and wallet linking</span>
-        </a>
-        <a href="#attend-event" className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md sm:p-5">
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">Step 05</span>
-          <span className="mt-1 block text-lg font-bold text-slate-900">Attend an event</span>
-          <span className="mt-1 block text-sm leading-5 text-slate-600">Claim a ticket and show its QR code</span>
-        </a>
-        <a href="#host-event" className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md sm:p-5">
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">Steps 06–07</span>
-          <span className="mt-1 block text-lg font-bold text-slate-900">Host an event</span>
-          <span className="mt-1 block text-sm leading-5 text-slate-600">Request creator access, publish, and check in</span>
-        </a>
-      </nav>
+      <div className="mb-6">
+        <div className="mb-3 text-center">
+          <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Follow these steps</h2>
+          <p className="mt-1 text-sm text-slate-600">Select a step or use Back and Next to move through the guide.</p>
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white py-5 pl-1 pr-4 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="relative min-w-[760px] pl-0 pr-3">
+            <div className="absolute left-[7.14%] right-[7.14%] top-[13px] h-0.5 bg-slate-200">
+              <div className="h-full bg-indigo-600 transition-all duration-300" style={{ width: `${(activeStepIndex / (guideSteps.length - 1)) * 100}%` }} />
+            </div>
+            <nav aria-label="Guide steps" className="relative grid grid-cols-7">
+              {guideSteps.map((step, index) => {
+                const isActive = activeStep === step.id;
+                const isComplete = index < activeStepIndex;
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    aria-current={isActive ? "step" : undefined}
+                    onClick={() => goToStep(step.id)}
+                    className="group flex min-w-0 flex-col items-center gap-2 text-center"
+                  >
+                    <span className={`grid size-7 place-items-center rounded-full border-2 text-[10px] font-bold transition ${isActive || isComplete ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-300 bg-white text-slate-500 group-hover:border-indigo-400"}`}>
+                      {step.number}
+                    </span>
+                    <span className={`max-w-24 text-[11px] font-semibold leading-4 transition ${isActive ? "text-indigo-700" : "text-slate-600 group-hover:text-indigo-700"}`}>
+                      {step.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between">
+          <button
+            type="button"
+            disabled={activeStepIndex === 0}
+            onClick={() => goToStep(guideSteps[activeStepIndex - 1].id)}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            ← Back
+          </button>
+          <span className="text-xs font-medium text-slate-500">Step {activeStepIndex + 1} of {guideSteps.length}</span>
+          <button
+            type="button"
+            disabled={activeStepIndex === guideSteps.length - 1}
+            onClick={() => goToStep(guideSteps[activeStepIndex + 1].id)}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            Next →
+          </button>
+        </div>
+      </div>
 
       <div className="space-y-10">
-        <section id="getting-started" className="scroll-mt-24">
+        <section id="getting-started" className="scroll-mt-24 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
           <GuideSectionHeading eyebrow="First, set up" title="Get started" description="Create your account, prepare MetaMask on Sepolia, and link your wallet." />
           <div className="space-y-5">
-        <article id="account" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <article id="account" className="scroll-mt-24 rounded-2xl border border-slate-100 bg-white p-5 sm:p-7">
           <StepHeading number="01" title="Create your TicketApp account">
             Your TicketApp account and your wallet are separate. Start by creating an account with a username, email, and password, then log in. New accounts start as attendees.
           </StepHeading>
@@ -93,13 +152,13 @@ const Guide = () => (
           </div>
         </article>
 
-        <article id="wallet" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <article id="wallet" className="scroll-mt-24 rounded-2xl border border-slate-100 bg-white p-5 sm:p-7">
           <StepHeading number="02" title="Install MetaMask">
             On a computer, install the browser extension. On a phone, install MetaMask from your device’s official app store and open TicketApp inside MetaMask’s built-in browser.
           </StepHeading>
           <ol className="mt-5 list-decimal space-y-2 pl-5 text-sm leading-6 text-slate-600">
             <li>Go to <ExternalLink href="https://metamask.io/download/">the official MetaMask download page</ExternalLink> and select your browser or phone.</li>
-            <li>Finish setup and create or import a wallet. Follow MetaMask’s guidance to protect your recovery phrase.</li>
+            <li>Create a separate MetaMask account just for testing this app. Do not connect an account that holds real funds. Follow MetaMask’s guidance to protect your recovery phrase.</li>
             <li>Only install from the official site or the official app store listing. TicketApp will never ask for your recovery phrase or private key.</li>
           </ol>
           <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
@@ -107,13 +166,20 @@ const Guide = () => (
           </p>
         </article>
 
-        <article id="sepolia" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <article id="sepolia" className="scroll-mt-24 rounded-2xl border border-slate-100 bg-white p-5 sm:p-7">
           <StepHeading number="03" title="Select Sepolia and get test ETH">
             The app’s contract runs on Sepolia. In MetaMask, open the network selector and choose Sepolia. If it is missing, open MetaMask’s network settings and turn on “Show test networks.”
           </StepHeading>
           <p className="mt-4 text-sm leading-6 text-slate-600">
             You need a small amount of Sepolia ETH to pay test transaction fees and, for paid events, the displayed ticket price. Copy your public wallet address from MetaMask, open a faucet, and request Sepolia ETH to that address. A faucet may require sign-in or have request limits.
           </p>
+          <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/70 p-4 text-sm leading-6 text-indigo-950">
+            <p className="font-semibold">TicketApp contract on Sepolia</p>
+            <p className="mt-1 break-all font-mono text-xs sm:text-sm">0x889907f8E8E04233f7642A3D0F0657A4159DE9e3</p>
+            <p className="mt-2">
+              <ExternalLink href="https://sepolia.etherscan.io/address/0x889907f8E8E04233f7642A3D0F0657A4159DE9e3">View contract on Sepolia Etherscan</ExternalLink>
+            </p>
+          </div>
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
             <ExternalLink href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia">Google Cloud Sepolia faucet</ExternalLink>
             <ExternalLink href="https://www.alchemy.com/faucets/ethereum-sepolia">Alchemy Sepolia faucet</ExternalLink>
@@ -127,7 +193,7 @@ const Guide = () => (
           </p>
         </article>
 
-        <article id="connect" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <article id="connect" className="scroll-mt-24 rounded-2xl border border-slate-100 bg-white p-5 sm:p-7">
           <StepHeading number="04" title="Connect your wallet to your account">
             Log in to TicketApp, open the account or menu area in the navigation bar, and choose “Connect wallet.” Approve the connection in MetaMask, then sign the message to link that address to your TicketApp account.
           </StepHeading>
@@ -140,10 +206,10 @@ const Guide = () => (
           </div>
         </section>
 
-        <section id="attend-event" className="scroll-mt-24">
+        <section id="tickets" className="scroll-mt-24 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
           <GuideSectionHeading eyebrow="For attendees" title="Attend an event" description="Browse public events, claim a ticket, and bring its QR code to the entrance." />
           <div className="space-y-5">
-        <article id="tickets" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <article className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-7">
           <StepHeading number="05" title="Find an event and claim a ticket">
             Open <Link to="/events" className="font-semibold text-indigo-700 underline underline-offset-4">Explore events</Link>. You can browse without logging in, but claiming requires a logged-in attendee or creator account and its linked wallet.
           </StepHeading>
@@ -160,10 +226,10 @@ const Guide = () => (
           </div>
         </section>
 
-        <section id="host-event" className="scroll-mt-24">
+        <section id="host-event" className="scroll-mt-24 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
           <GuideSectionHeading eyebrow="For organizers" title="Host an event" description="Apply for creator access, publish an event, then manage proceeds and check in attendees." />
           <div className="space-y-5">
-        <article id="creator" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <article id="creator" className="scroll-mt-24 rounded-2xl border border-slate-100 bg-white p-5 sm:p-7">
           <StepHeading number="06" title="Apply to become a creator">
             Creator access is reviewed. First connect a wallet to your attendee account, then use “Become a creator” in the account menu.
           </StepHeading>
@@ -175,7 +241,7 @@ const Guide = () => (
           <Link to="/creator/request" className="mt-5 inline-flex rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">Request creator access</Link>
         </article>
 
-        <article id="manage" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <article id="manage" className="scroll-mt-24 rounded-2xl border border-slate-100 bg-white p-5 sm:p-7">
           <StepHeading number="07" title="Create, manage, and check in an event">
             Once approved, use “Create event” to publish an event. Creator actions require the wallet linked to your creator account and Sepolia ETH for on-chain transactions.
           </StepHeading>
@@ -206,6 +272,7 @@ const Guide = () => (
 
     <Footer />
   </main>
-);
+  );
+};
 
 export default Guide;
